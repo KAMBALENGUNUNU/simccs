@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-SimccsApplication<simccs>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.acp.simccs.SimccsApplication",
+            "projectName": "simccs",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
