@@ -1,7 +1,7 @@
 package com.acp.simccs.common.security;
 
-import com.acp.simccs.modules.identity.model.User; // Error until Module A
-import com.acp.simccs.modules.identity.repository.UserRepository; // Error until Module A
+import com.acp.simccs.modules.identity.model.User; 
+import com.acp.simccs.modules.identity.repository.UserRepository; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
