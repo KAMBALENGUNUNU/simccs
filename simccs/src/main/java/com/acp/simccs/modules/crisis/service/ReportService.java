@@ -2,6 +2,7 @@ package com.acp.simccs.modules.crisis.service;
 
 import com.acp.simccs.modules.crisis.dto.ReportRequest;
 import com.acp.simccs.modules.crisis.dto.ReportResponse;
+import com.acp.simccs.modules.crisis.event.ReportSubmittedEvent; // 1. Import Event
 import com.acp.simccs.modules.crisis.model.Category;
 import com.acp.simccs.modules.crisis.model.CrisisReport;
 import com.acp.simccs.modules.crisis.model.EReportStatus;
@@ -10,7 +11,9 @@ import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.UserRepository;
 import com.acp.simccs.modules.identity.service.SecurityService;
+import com.acp.simccs.modules.workflow.service.MisinformationService; // 2. Import AI Service
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher; // 3. Import Publisher
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +36,12 @@ public class ReportService {
 
     @Autowired
     private SecurityService securityService; // Used for Encryption
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher; // 4. Inject Publisher
+
+    @Autowired
+    private MisinformationService misinformationService; // 5. Inject AI Service
 
     @Transactional
     public ReportResponse createReport(ReportRequest request, String userEmail) {
@@ -63,7 +72,21 @@ public class ReportService {
         }
         report.setCategories(categories);
 
+        // Save to Database
         CrisisReport savedReport = reportRepository.save(report);
+
+        // --- NEW LOGIC START ---
+        
+        // 1. Trigger AI Scan (Module C)
+        // Checks for keywords like "rumor" or "aliens"
+        misinformationService.autoScanReport(savedReport);
+
+        // 2. Publish Event (Module E)
+        // Notifies the Dashboard/WebSocket listeners
+        eventPublisher.publishEvent(new ReportSubmittedEvent(savedReport));
+
+        // --- NEW LOGIC END ---
+
         return mapToResponse(savedReport, true); // true = return decrypted content
     }
 
