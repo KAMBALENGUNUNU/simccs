@@ -1,6 +1,6 @@
-package com.acp.simccs.common.security;
+package com.acp.simccs.modules.identity.security;
 
-import com.acp.simccs.modules.identity.model.User; 
+import com.acp.simccs.modules.identity.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

@@ -1,4 +1,4 @@
-package com.acp.simccs.common.security;
+package com.acp.simccs.modules.identity.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -18,7 +18,7 @@ public class JwtUtils {
 
     // Ideally, move this to application.properties
     // This is a 256-bit (32 byte) secret key encoded in Base64
-    private String jwtSecret = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"; 
+    private String jwtSecret = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
 
     private int jwtExpirationMs = 86400000; // 24 hours
 

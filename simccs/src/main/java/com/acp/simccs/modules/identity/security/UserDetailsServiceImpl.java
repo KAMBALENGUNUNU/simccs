@@ -1,4 +1,4 @@
-package com.acp.simccs.common.security;
+package com.acp.simccs.modules.identity.security;
 
 import com.acp.simccs.modules.identity.model.User; 
 import com.acp.simccs.modules.identity.repository.UserRepository; 

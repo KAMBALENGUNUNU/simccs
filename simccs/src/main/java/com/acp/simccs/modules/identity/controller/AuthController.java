@@ -1,7 +1,5 @@
 package com.acp.simccs.modules.identity.controller;
 
-import com.acp.simccs.common.security.JwtUtils;
-import com.acp.simccs.common.security.UserDetailsImpl;
 import com.acp.simccs.modules.identity.dto.JwtResponse;
 import com.acp.simccs.modules.identity.dto.LoginRequest;
 import com.acp.simccs.modules.identity.dto.MessageResponse;
@@ -11,6 +9,9 @@ import com.acp.simccs.modules.identity.model.Role;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.RoleRepository;
 import com.acp.simccs.modules.identity.repository.UserRepository;
+import com.acp.simccs.modules.identity.security.JwtUtils;
+import com.acp.simccs.modules.identity.security.UserDetailsImpl;
+
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

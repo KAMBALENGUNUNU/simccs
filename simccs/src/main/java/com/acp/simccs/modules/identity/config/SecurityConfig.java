@@ -1,8 +1,8 @@
-package com.acp.simccs.config;
+package com.acp.simccs.modules.identity.config;
 
-import com.acp.simccs.common.security.AuthEntryPointJwt;
-import com.acp.simccs.common.security.AuthTokenFilter;
-import com.acp.simccs.common.security.UserDetailsServiceImpl;
+import com.acp.simccs.modules.identity.security.AuthEntryPointJwt;
+import com.acp.simccs.modules.identity.security.AuthTokenFilter;
+import com.acp.simccs.modules.identity.security.UserDetailsServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,13 +19,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Allows use of @PreAuthorize defined in the logic
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthEntryPointJwt unauthorizedHandler;
 
-    // Constructor Injection
     public SecurityConfig(UserDetailsServiceImpl userDetailsService, AuthEntryPointJwt unauthorizedHandler) {
         this.userDetailsService = userDetailsService;
         this.unauthorizedHandler = unauthorizedHandler;
@@ -39,10 +38,10 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        
+
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
-        
+
         return authProvider;
     }
 
@@ -58,27 +57,19 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable()) // Disable CSRF as we use JWT
-            .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // Public Endpoints
-                .requestMatchers("/api/auth/**").permitAll() // Login/Register
-                .requestMatchers("/api/auth/mfa/**").permitAll() // 2FA
-                .requestMatchers("/api/test/**").permitAll()
-                .requestMatchers("/ws/**").permitAll() // WebSocket Handshake
-                // Swagger UI Endpoints
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                // Role Based Endpoints (General rules, specific ones in Controllers)
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // All other requests need authentication
-                .anyRequest().authenticated()
-            );
+        http.csrf(csrf -> csrf.disable())
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/mfa/**").permitAll()
+                        .requestMatchers("/api/test/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated());
 
-        // Add the JWT Provider
         http.authenticationProvider(authenticationProvider());
-
-        // Add the JWT Filter before the UsernamePasswordAuthenticationFilter
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

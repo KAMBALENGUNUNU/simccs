@@ -1,4 +1,4 @@
-package com.acp.simccs.common.security;
+package com.acp.simccs.modules.identity.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
