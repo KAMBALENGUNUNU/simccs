@@ -12,6 +12,7 @@ import com.acp.simccs.modules.identity.repository.UserRepository;
 import com.acp.simccs.modules.identity.security.JwtUtils;
 import com.acp.simccs.modules.identity.security.UserDetailsImpl;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "User authentication and registration endpoints")
 public class AuthController {
     @Autowired
     AuthenticationManager authenticationManager;
