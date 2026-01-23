@@ -47,8 +47,10 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
+    // CHANGED: ResponseEntity<?> -> ResponseEntity<Object> for Swagger
+    // compatibility
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Object> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
@@ -76,8 +78,10 @@ public class AuthController {
                 roles));
     }
 
+    // CHANGED: ResponseEntity<?> -> ResponseEntity<Object> for Swagger
+    // compatibility
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    public ResponseEntity<Object> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity
                     .badRequest()
@@ -118,8 +122,9 @@ public class AuthController {
         }
 
         user.setRoles(roles);
-        // Explicitly set enabled to false (Redundant as default is false, but good for clarity)
-        user.setIsEnabled(false); 
+        // Explicitly set enabled to false (Redundant as default is false, but good for
+        // clarity)
+        user.setIsEnabled(false);
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully! Wait for Admin approval."));
