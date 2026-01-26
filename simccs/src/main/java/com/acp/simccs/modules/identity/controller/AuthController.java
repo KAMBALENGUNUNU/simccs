@@ -15,6 +15,10 @@ import com.acp.simccs.modules.identity.model.RefreshToken;
 import com.acp.simccs.modules.identity.dto.TokenRefreshRequest;
 import com.acp.simccs.modules.identity.dto.TokenRefreshResponse;
 import com.acp.simccs.modules.identity.service.RefreshTokenService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -56,8 +60,11 @@ public class AuthController {
     @Autowired
     RefreshTokenService refreshTokenService;
 
-    // CHANGED: ResponseEntity<?> -> ResponseEntity<Object> for Swagger
-    // compatibility
+    @Operation(summary = "Login user", responses = {
+            @ApiResponse(responseCode = "200", description = "Login successful", content = @Content(schema = @Schema(implementation = JwtResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Account disabled")
+    })
     @PostMapping("/login")
     public ResponseEntity<Object> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
@@ -90,8 +97,13 @@ public class AuthController {
                 roles));
     }
 
+    // CHANGED: ResponseEntity<?> -> ResponseEntity<Object> to prevent Swagger errors
+    @Operation(summary = "Refresh token", responses = {
+            @ApiResponse(responseCode = "200", description = "Token refresh successful", content = @Content(schema = @Schema(implementation = TokenRefreshResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Refresh token is not in database!")
+    })
     @PostMapping("/refreshtoken")
-    public ResponseEntity<?> refreshtoken(@Valid @RequestBody TokenRefreshRequest request) {
+    public ResponseEntity<Object> refreshtoken(@Valid @RequestBody TokenRefreshRequest request) {
         String requestRefreshToken = request.getRefreshToken();
 
         return refreshTokenService.findByToken(requestRefreshToken)
@@ -99,14 +111,16 @@ public class AuthController {
                 .map(RefreshToken::getUser)
                 .map(user -> {
                     String token = jwtUtils.generateTokenFromUsername(user.getEmail());
-                    return ResponseEntity.ok(new TokenRefreshResponse(token, requestRefreshToken));
+                    return ResponseEntity.ok((Object) new TokenRefreshResponse(token, requestRefreshToken));
                 })
                 .orElseThrow(() -> new RuntimeException(
                         "Refresh token is not in database!"));
     }
 
-    // CHANGED: ResponseEntity<?> -> ResponseEntity<Object> for Swagger
-    // compatibility
+    @Operation(summary = "Register user", responses = {
+            @ApiResponse(responseCode = "200", description = "User registered successfully", content = @Content(schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Error: Email is already in use!")
+    })
     @PostMapping("/register")
     public ResponseEntity<Object> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
