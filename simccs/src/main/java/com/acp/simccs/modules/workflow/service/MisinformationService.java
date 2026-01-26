@@ -53,4 +53,11 @@ public class MisinformationService {
         flag.setAiConfidenceScore(confidence);
         flagRepository.save(flag);
     }
+    public void manuallyFlagReport(CrisisReport report) {
+        createSystemFlag(report, "Manually flagged by Editor/Admin", 1.0);
+    }
+
+    public List<MisinformationFlag> getFlaggedReports() {
+        return flagRepository.findAll();
+    }
 }

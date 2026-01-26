@@ -20,7 +20,9 @@ public class ChatChannel {
 
     // e.g., PUBLIC, PRIVATE, DIRECT
     @Column(nullable = false)
-    private String type; 
+    private String type;
+
+    private String description; 
 
     private LocalDateTime createdAt = LocalDateTime.now();
 

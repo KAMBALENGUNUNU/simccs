@@ -25,6 +25,12 @@ public class WorkflowService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private com.acp.simccs.modules.workflow.repository.ReportVersionRepository reportVersionRepository;
+
+    @Autowired
+    private com.acp.simccs.modules.workflow.service.MisinformationService misinformationService;
+
     @Transactional
     public void processReview(Long reportId, ReviewRequest request, String editorEmail) {
         CrisisReport report = reportRepository.findById(reportId)
@@ -52,5 +58,23 @@ public class WorkflowService {
         }
 
         reportRepository.save(report);
+        reportRepository.save(report);
+    }
+
+    public java.util.List<?> getVersions(Long reportId) {
+        return reportVersionRepository.findByReportId(reportId);
+    }
+
+    public Object getVersion(Long versionId) {
+        return reportVersionRepository.findById(versionId).orElseThrow(() -> new RuntimeException("Version not found"));
+    }
+
+    public void flagReport(Long reportId) {
+        CrisisReport report = reportRepository.findById(reportId).orElseThrow(() -> new RuntimeException("Report not found"));
+        misinformationService.manuallyFlagReport(report);
+    }
+
+    public java.util.List<?> getFlaggedReports() {
+        return misinformationService.getFlaggedReports();
     }
 }

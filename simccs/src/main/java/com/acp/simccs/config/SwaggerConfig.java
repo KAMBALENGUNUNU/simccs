@@ -57,7 +57,7 @@ public class SwaggerConfig {
     public GroupedOpenApi crisisApi() {
         return GroupedOpenApi.builder()
             .group("Crisis Management")
-            .pathsToMatch("/api/reports/**")
+            .pathsToMatch("/api/reports/**", "/api/media/**", "/api/sync/**", "/api/analytics/**")
             .build();
     }
 
@@ -74,6 +74,14 @@ public class SwaggerConfig {
         return GroupedOpenApi.builder()
             .group("Communication")
             .pathsToMatch("/api/chat/**", "/ws/**")
+            .build();
+    }
+
+    @Bean
+    public GroupedOpenApi adminApi() {
+        return GroupedOpenApi.builder()
+            .group("Admin & System")
+            .pathsToMatch("/api/admin/**")
             .build();
     }
 

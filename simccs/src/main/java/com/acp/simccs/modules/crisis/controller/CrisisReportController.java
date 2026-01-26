@@ -62,4 +62,20 @@ public class CrisisReportController {
     public ResponseEntity<ReportResponse> getReportById(@PathVariable Long id) {
         return ResponseEntity.ok(reportService.getReportById(id));
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('JOURNALIST') or hasRole('EDITOR') or hasRole('ADMIN')")
+    @Operation(summary = "Update a report", description = "Update an existing report (creates new version).")
+    public ResponseEntity<ReportResponse> updateReport(@PathVariable Long id, @Valid @RequestBody ReportRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(reportService.updateReport(id, request, email));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Soft delete a report", description = "Soft delete a report.")
+    public ResponseEntity<Void> deleteReport(@PathVariable Long id) {
+        reportService.softDeleteReport(id);
+        return ResponseEntity.noContent().build();
+    }
 }

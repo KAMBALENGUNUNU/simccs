@@ -11,6 +11,10 @@ import com.acp.simccs.modules.identity.repository.RoleRepository;
 import com.acp.simccs.modules.identity.repository.UserRepository;
 import com.acp.simccs.modules.identity.security.JwtUtils;
 import com.acp.simccs.modules.identity.security.UserDetailsImpl;
+import com.acp.simccs.modules.identity.model.RefreshToken;
+import com.acp.simccs.modules.identity.dto.TokenRefreshRequest;
+import com.acp.simccs.modules.identity.dto.TokenRefreshResponse;
+import com.acp.simccs.modules.identity.service.RefreshTokenService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -49,6 +53,9 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
+    @Autowired
+    RefreshTokenService refreshTokenService;
+
     // CHANGED: ResponseEntity<?> -> ResponseEntity<Object> for Swagger
     // compatibility
     @PostMapping("/login")
@@ -73,11 +80,29 @@ public class AuthController {
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
 
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
+
         return ResponseEntity.ok(new JwtResponse(jwt,
+                refreshToken.getToken(),
                 userDetails.getId(),
                 userDetails.getEmail(),
                 userDetails.isEnabled(),
                 roles));
+    }
+
+    @PostMapping("/refreshtoken")
+    public ResponseEntity<?> refreshtoken(@Valid @RequestBody TokenRefreshRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+
+        return refreshTokenService.findByToken(requestRefreshToken)
+                .map(refreshTokenService::verifyExpiration)
+                .map(RefreshToken::getUser)
+                .map(user -> {
+                    String token = jwtUtils.generateTokenFromUsername(user.getEmail());
+                    return ResponseEntity.ok(new TokenRefreshResponse(token, requestRefreshToken));
+                })
+                .orElseThrow(() -> new RuntimeException(
+                        "Refresh token is not in database!"));
     }
 
     // CHANGED: ResponseEntity<?> -> ResponseEntity<Object> for Swagger

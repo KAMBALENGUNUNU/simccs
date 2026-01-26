@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ReportVersionRepository extends JpaRepository<ReportVersion, Long> {
     List<ReportVersion> findByReportIdOrderByVersionNumberDesc(Long reportId);
+    List<ReportVersion> findByReportId(Long reportId);
 }

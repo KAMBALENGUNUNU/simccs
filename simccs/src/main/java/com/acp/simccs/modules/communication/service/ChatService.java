@@ -67,4 +67,18 @@ public class ChatService {
                 ))
                 .collect(Collectors.toList());
     }
+
+    public List<com.acp.simccs.modules.communication.dto.ChannelDTO> getChannels() {
+        return channelRepository.findAll().stream()
+                .map(channel -> new com.acp.simccs.modules.communication.dto.ChannelDTO(channel.getId(), channel.getName(), channel.getDescription()))
+                .collect(Collectors.toList());
+    }
+
+    public com.acp.simccs.modules.communication.dto.ChannelDTO createChannel(com.acp.simccs.modules.communication.dto.ChannelDTO channelDTO) {
+        ChatChannel channel = new ChatChannel();
+        channel.setName(channelDTO.getName());
+        channel.setDescription(channelDTO.getDescription());
+        ChatChannel saved = channelRepository.save(channel);
+        return new com.acp.simccs.modules.communication.dto.ChannelDTO(saved.getId(), saved.getName(), saved.getDescription());
+    }
 }

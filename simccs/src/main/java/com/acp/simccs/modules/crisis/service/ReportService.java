@@ -104,6 +104,35 @@ public class ReportService {
         return mapToResponse(report, true);
     }
 
+    @Transactional
+    public ReportResponse updateReport(Long id, ReportRequest request, String userEmail) {
+        CrisisReport report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+        
+        // Versioning logic could be here: save current state to history table
+        
+        report.setTitle(request.getTitle());
+        report.setSummary(request.getSummary());
+        report.setLocationLat(request.getLatitude());
+        report.setLocationLng(request.getLongitude());
+        report.setCasualtyCount(request.getCasualtyCount());
+        
+        String encryptedContent = securityService.encrypt(request.getContent());
+        report.setContentEncrypted(encryptedContent);
+
+        // Update categories logic if needed (simplified here)
+        
+        return mapToResponse(reportRepository.save(report), true);
+    }
+
+    @Transactional
+    public void softDeleteReport(Long id) {
+        CrisisReport report = reportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+        report.setStatus(EReportStatus.DELETED); // specific status for soft delete
+        reportRepository.save(report);
+    }
+
     private ReportResponse mapToResponse(CrisisReport report, boolean decryptContent) {
         ReportResponse response = new ReportResponse();
         response.setId(report.getId());

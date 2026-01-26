@@ -5,5 +5,6 @@ public enum EReportStatus {
     SUBMITTED,
     VERIFIED,
     PUBLISHED,
-    REJECTED
+    REJECTED,
+    DELETED
 }

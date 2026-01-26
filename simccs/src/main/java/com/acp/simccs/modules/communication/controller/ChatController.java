@@ -12,12 +12,16 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 //import java.security.Principal;
+import com.acp.simccs.modules.communication.dto.ChannelDTO;
 import java.util.List;
 
 @Controller
+@ResponseBody
 public class ChatController {
 
     @Autowired
@@ -50,9 +54,22 @@ public class ChatController {
     /**
      * REST Endpoint to load chat history
      */
-    @GetMapping("/api/chat/history/{channelId}")
-    @ResponseBody
+    /**
+     * REST Endpoint to load chat history
+     */
+    @GetMapping("/api/chat/channels/{channelId}/history")
     public ResponseEntity<List<MessageDTO>> getChatHistory(@PathVariable Long channelId) {
         return ResponseEntity.ok(chatService.getHistory(channelId));
     }
+
+    @GetMapping("/api/chat/channels")
+    public ResponseEntity<List<ChannelDTO>> getChannels() {
+        return ResponseEntity.ok(chatService.getChannels());
+    }
+
+    @PostMapping("/api/chat/channels")
+    public ResponseEntity<ChannelDTO> createChannel(@RequestBody ChannelDTO channelDTO) {
+        return ResponseEntity.ok(chatService.createChannel(channelDTO));
+    }
+    
 }
