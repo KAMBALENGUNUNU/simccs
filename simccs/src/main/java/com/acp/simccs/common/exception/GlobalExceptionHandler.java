@@ -35,9 +35,20 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 
-    // Handle General Exceptions
+    // Handle General Exceptions (Swagger-safe)
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) throws Exception {
+
+        String path = request.getDescription(false);
+
+        // IMPORTANT: Let springdoc / Swagger handle its own internal errors
+        if (path != null &&
+                (path.contains("/v3/api-docs") ||
+                        path.contains("/swagger-ui") ||
+                        path.contains("/api-docs"))) {
+            throw ex;
+        }
+
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 ex.getMessage(),
