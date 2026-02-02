@@ -53,10 +53,15 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
 
+        // Allow all Swagger/OpenAPI endpoints
         return path.startsWith("/v3/api-docs")
+                || path.startsWith("/api-docs")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/swagger-ui.html")
-                || path.startsWith("/webjars");
+                || path.startsWith("/swagger-resources")
+                || path.startsWith("/webjars")
+                || path.startsWith("/configuration/ui")
+                || path.startsWith("/configuration/security");
     }
 
     private String parseJwt(HttpServletRequest request) {
