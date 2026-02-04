@@ -1,5 +1,6 @@
 package com.acp.simccs.modules.system.service;
 
+import com.acp.simccs.common.service.NotificationService;
 import com.acp.simccs.modules.system.model.ESystemStatus;
 import com.acp.simccs.modules.system.model.SystemBackup;
 import com.acp.simccs.modules.system.repository.SystemBackupRepository;
@@ -22,6 +23,7 @@ public class BackupService {
 
     private static final Logger logger = LoggerFactory.getLogger(BackupService.class);
     private final SystemBackupRepository backupRepository;
+    private final NotificationService notificationService; // <--- INJECTED
 
     @Value("${spring.datasource.username}")
     private String dbUser;
@@ -54,7 +56,6 @@ public class BackupService {
         backupRepository.save(backupRecord);
 
         try {
-            // FIXED: Using mysqldump instead of pg_dump
             // Note: mysqldump needs to be in your System PATH
             ProcessBuilder pb = new ProcessBuilder(
                     "mysqldump",
@@ -74,15 +75,53 @@ public class BackupService {
             } else {
                 backupRecord.setStatus(ESystemStatus.FAILED);
                 backupRecord.setLogMessage("Process failed. Exit code: " + process.exitValue());
+
+                // --- SYSTEM ALERT ---
+                notificationService.sendSystemAlert("Database Backup (Process)", "Exit Code: " + process.exitValue());
             }
 
         } catch (Exception e) {
             logger.error("Backup failed", e);
             backupRecord.setStatus(ESystemStatus.FAILED);
             backupRecord.setLogMessage(e.getMessage());
+
+            // --- SYSTEM ALERT ---
+            notificationService.sendSystemAlert("Database Backup (Exception)", e.getMessage());
         }
 
         backupRepository.save(backupRecord);
+    }
+
+    // --- RESTORE METHOD ---
+    public void restoreBackup(String filename) {
+        File backupFile = new File(BACKUP_DIR + filename);
+        if (!backupFile.exists()) {
+            throw new RuntimeException("Backup file not found: " + filename);
+        }
+
+        logger.info("Restoring from: " + filename);
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                    "mysql",
+                    "-u", dbUser,
+                    "-p" + dbPass,
+                    DB_NAME,
+                    "-e", "source " + backupFile.getAbsolutePath()
+            );
+
+            Process process = pb.start();
+            boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+
+            if (!finished || process.exitValue() != 0) {
+                throw new RuntimeException("Restore process failed. Exit code: " + process.exitValue());
+            }
+            logger.info("Restore completed successfully.");
+
+        } catch (Exception e) {
+            logger.error("Restore failed", e);
+            throw new RuntimeException("Restore failed: " + e.getMessage());
+        }
     }
 
     public List<SystemBackup> getBackupHistory() {

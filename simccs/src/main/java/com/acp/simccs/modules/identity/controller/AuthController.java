@@ -1,6 +1,7 @@
 package com.acp.simccs.modules.identity.controller;
 
 import com.acp.simccs.common.dto.ResponseDTO;
+import com.acp.simccs.common.service.NotificationService; // <--- NEW IMPORT
 import com.acp.simccs.modules.identity.dto.*;
 import com.acp.simccs.modules.identity.model.*;
 import com.acp.simccs.modules.identity.repository.RoleRepository;
@@ -38,6 +39,7 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final NotificationService notificationService; // <--- INJECTED
 
     @PostMapping("/login")
     @Operation(summary = "Login user")
@@ -113,6 +115,9 @@ public class AuthController {
         user.setRoles(roles);
         user.setIsEnabled(false);
         userRepository.save(user);
+
+        // --- NOTIFICATION ---
+        notificationService.notifyAdminOfNewUser(user.getEmail(), user.getFullName());
 
         return ResponseDTO.success("User registered successfully! Wait for Admin approval.", new MessageResponse("Registered"))
                 .toResponseEntity();
