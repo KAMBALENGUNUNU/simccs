@@ -19,17 +19,22 @@ public class ArchiveController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    // FIX: Explicitly defined List<SystemBackup> instead of wildcard
     public ResponseEntity<ResponseDTO<List<SystemBackup>>> getBackupHistory() {
         return ResponseDTO.success(backupService.getBackupHistory()).toResponseEntity();
     }
 
     @PostMapping("/trigger")
     @PreAuthorize("hasRole('ADMIN')")
-    // FIX: Changed return type to String (since we return a message, not a list)
     public ResponseEntity<ResponseDTO<String>> triggerManualBackup() {
         new Thread(backupService::performManualBackup).start();
-        // FIX: Added .<String> type hint to handle the null data
         return ResponseDTO.<String>success("Backup process started in background.", null).toResponseEntity();
+    }
+
+    // --- NEW RESTORE ENDPOINT ---
+    @PostMapping("/restore/{filename}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseDTO<String>> restoreDatabase(@PathVariable String filename) {
+        backupService.restoreBackup(filename);
+        return ResponseDTO.<String>success("Database restoration started.", null).toResponseEntity();
     }
 }
