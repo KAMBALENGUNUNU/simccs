@@ -1,7 +1,7 @@
-package com.acp.simccs.modules.identity.security;
+package com.acp.simccs.security;
 
-import com.acp.simccs.modules.identity.model.User; 
-import com.acp.simccs.modules.identity.repository.UserRepository; 
+import com.acp.simccs.modules.identity.model.User;
+import com.acp.simccs.modules.identity.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
-    
+
     @Autowired
     UserRepository userRepository;
 

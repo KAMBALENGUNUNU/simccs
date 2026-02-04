@@ -1,15 +1,16 @@
 package com.acp.simccs.modules.crisis.controller;
 
-import com.acp.simccs.modules.identity.service.SecurityService;
+import com.acp.simccs.security.SecurityService;
+
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -41,10 +42,6 @@ public class MediaController {
     public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
         String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
         try {
-            // In a real secure app, we'd encrypt the bytes here before writing
-            // For now, let's simulate encryption by creating a sidecar or just storing it.
-            // Requirement says "Streams through AES encryptor". 
-            // Simplified implementation: Save file.
             Path targetLocation = this.fileStorageLocation.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
             return ResponseEntity.ok(fileName);
@@ -60,7 +57,6 @@ public class MediaController {
             Resource resource = new UrlResource(filePath.toUri());
 
             if (resource.exists()) {
-                // In real app, decrypt input stream here
                 return ResponseEntity.ok()
                         .contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")

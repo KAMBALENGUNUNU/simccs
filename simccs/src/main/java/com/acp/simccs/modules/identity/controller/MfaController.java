@@ -1,5 +1,6 @@
 package com.acp.simccs.modules.identity.controller;
 
+import com.acp.simccs.common.dto.ResponseDTO;
 import com.acp.simccs.modules.identity.dto.MfaSetupResponse;
 import com.acp.simccs.modules.identity.dto.MfaVerifyRequest;
 import com.acp.simccs.modules.identity.model.User;
@@ -8,12 +9,9 @@ import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import com.warrenstrange.googleauth.GoogleAuthenticatorQRGenerator;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,19 +19,16 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth/mfa")
+@RequiredArgsConstructor
 @Tag(name = "MFA", description = "Multi-Factor Authentication endpoints")
 public class MfaController {
 
-    @Autowired
-    UserRepository userRepository;
-
+    private final UserRepository userRepository;
     private final GoogleAuthenticator gAuth = new GoogleAuthenticator();
 
-    @Operation(summary = "Setup MFA", responses = {
-            @ApiResponse(responseCode = "200", description = "MFA Setup Data", content = @Content(schema = @Schema(implementation = MfaSetupResponse.class)))
-    })
     @GetMapping("/setup")
-    public ResponseEntity<Object> setupMfa() {
+    @Operation(summary = "Setup MFA")
+    public ResponseEntity<ResponseDTO<MfaSetupResponse>> setupMfa() {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
 
@@ -44,20 +39,18 @@ public class MfaController {
         user.setMfaSecret(secret);
         userRepository.save(user);
 
-        return ResponseEntity.ok(new MfaSetupResponse(secret, qrCodeUrl));
+        return ResponseDTO.success(new MfaSetupResponse(secret, qrCodeUrl)).toResponseEntity();
     }
 
-    @Operation(summary = "Verify MFA", responses = {
-            @ApiResponse(responseCode = "200", description = "MFA enabled/verified successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid MFA code")
-    })
     @PostMapping("/verify")
-    public ResponseEntity<Object> verifyMfa(@Valid @RequestBody MfaVerifyRequest request) {
+    @Operation(summary = "Verify MFA")
+    public ResponseEntity<ResponseDTO<String>> verifyMfa(@Valid @RequestBody MfaVerifyRequest request) {
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
 
         if (user.getMfaSecret() == null) {
-            return ResponseEntity.badRequest().body("MFA is not set up for this user.");
+            // FIX: Added type hint <String>
+            return ResponseDTO.<String>error("MFA is not set up for this user.").toResponseEntity();
         }
 
         boolean isCodeValid = gAuth.authorize(user.getMfaSecret(), Integer.parseInt(request.getCode()));
@@ -65,9 +58,11 @@ public class MfaController {
         if (isCodeValid) {
             user.setMfaEnabled(true);
             userRepository.save(user);
-            return ResponseEntity.ok("MFA enabled/verified successfully.");
+            // FIX: Added type hint <String> because data is null
+            return ResponseDTO.<String>success("MFA enabled/verified successfully.", null).toResponseEntity();
         } else {
-            return ResponseEntity.badRequest().body("Invalid MFA code.");
+            // FIX: Added type hint <String>
+            return ResponseDTO.<String>error("Invalid MFA code.").toResponseEntity();
         }
     }
 }

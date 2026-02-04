@@ -2,7 +2,7 @@ package com.acp.simccs.modules.crisis.service;
 
 import com.acp.simccs.modules.crisis.dto.ReportRequest;
 import com.acp.simccs.modules.crisis.dto.ReportResponse;
-import com.acp.simccs.modules.crisis.event.ReportSubmittedEvent; // 1. Import Event
+import com.acp.simccs.modules.crisis.event.ReportSubmittedEvent;
 import com.acp.simccs.modules.crisis.model.Category;
 import com.acp.simccs.modules.crisis.model.CrisisReport;
 import com.acp.simccs.modules.crisis.model.EReportStatus;
@@ -10,10 +10,10 @@ import com.acp.simccs.modules.crisis.repository.CategoryRepository;
 import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.UserRepository;
-import com.acp.simccs.modules.identity.service.SecurityService;
-import com.acp.simccs.modules.workflow.service.MisinformationService; // 2. Import AI Service
+import com.acp.simccs.security.SecurityService; // <--- IMPORTANT IMPORT
+import com.acp.simccs.modules.workflow.service.MisinformationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher; // 3. Import Publisher
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,21 +27,16 @@ public class ReportService {
 
     @Autowired
     private CrisisReportRepository reportRepository;
-
     @Autowired
     private UserRepository userRepository;
-    
     @Autowired
     private CategoryRepository categoryRepository;
-
     @Autowired
-    private SecurityService securityService; // Used for Encryption
-
+    private SecurityService securityService;
     @Autowired
-    private ApplicationEventPublisher eventPublisher; // 4. Inject Publisher
-
+    private ApplicationEventPublisher eventPublisher;
     @Autowired
-    private MisinformationService misinformationService; // 5. Inject AI Service
+    private MisinformationService misinformationService;
 
     @Transactional
     public ReportResponse createReport(ReportRequest request, String userEmail) {
@@ -57,11 +52,9 @@ public class ReportService {
         report.setCasualtyCount(request.getCasualtyCount());
         report.setStatus(EReportStatus.SUBMITTED);
 
-        // ENCRYPT THE CONTENT
-        String encryptedContent = securityService.encrypt(request.getContent());
-        report.setContentEncrypted(encryptedContent);
+        // Encrypt
+        report.setContentEncrypted(securityService.encrypt(request.getContent()));
 
-        // Handle Categories
         Set<Category> categories = new HashSet<>();
         if (request.getCategories() != null) {
             for (String catName : request.getCategories()) {
@@ -72,56 +65,40 @@ public class ReportService {
         }
         report.setCategories(categories);
 
-        // Save to Database
         CrisisReport savedReport = reportRepository.save(report);
 
-        // --- NEW LOGIC START ---
-        
-        // 1. Trigger AI Scan (Module C)
-        // Checks for keywords like "rumor" or "aliens"
+        // AI Scan & Event
         misinformationService.autoScanReport(savedReport);
-
-        // 2. Publish Event (Module E)
-        // Notifies the Dashboard/WebSocket listeners
         eventPublisher.publishEvent(new ReportSubmittedEvent(savedReport));
 
-        // --- NEW LOGIC END ---
-
-        return mapToResponse(savedReport, true); // true = return decrypted content
+        return mapToResponse(savedReport, true);
     }
 
     public List<ReportResponse> getAllReports() {
-        // For list views, we might NOT want to decrypt everything for performance, 
-        // usually just showing the summary is safer.
         return reportRepository.findAll().stream()
-                .map(r -> mapToResponse(r, false)) // false = do not decrypt body
+                .map(r -> mapToResponse(r, false)) // List view: don't decrypt body
                 .collect(Collectors.toList());
     }
-    
+
     public ReportResponse getReportById(Long id) {
         CrisisReport report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
-        return mapToResponse(report, true);
+        return mapToResponse(report, true); // Detail view: decrypt body
     }
 
     @Transactional
     public ReportResponse updateReport(Long id, ReportRequest request, String userEmail) {
         CrisisReport report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
-        
-        // Versioning logic could be here: save current state to history table
-        
+
         report.setTitle(request.getTitle());
         report.setSummary(request.getSummary());
         report.setLocationLat(request.getLatitude());
         report.setLocationLng(request.getLongitude());
         report.setCasualtyCount(request.getCasualtyCount());
-        
-        String encryptedContent = securityService.encrypt(request.getContent());
-        report.setContentEncrypted(encryptedContent);
 
-        // Update categories logic if needed (simplified here)
-        
+        report.setContentEncrypted(securityService.encrypt(request.getContent()));
+
         return mapToResponse(reportRepository.save(report), true);
     }
 
@@ -129,7 +106,7 @@ public class ReportService {
     public void softDeleteReport(Long id) {
         CrisisReport report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
-        report.setStatus(EReportStatus.DELETED); // specific status for soft delete
+        report.setStatus(EReportStatus.DELETED);
         reportRepository.save(report);
     }
 
@@ -150,7 +127,7 @@ public class ReportService {
         } else {
             response.setContent("Encrypted content... view details to read.");
         }
-        
+
         Set<String> catNames = report.getCategories().stream()
                 .map(Category::getName)
                 .collect(Collectors.toSet());

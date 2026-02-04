@@ -1,11 +1,10 @@
-package com.acp.simccs.modules.identity.security;
+package com.acp.simccs.security;
+
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -13,14 +12,12 @@ import java.security.Key;
 import java.util.Date;
 
 @Component
-public class JwtUtils {
-    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
+@Slf4j
+public class JwtService {
 
-    // Ideally, move this to application.properties
-    // This is a 256-bit (32 byte) secret key encoded in Base64
+    // Move to properties in real app
     private String jwtSecret = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
-
-    private int jwtExpirationMs = 86400000; // 24 hours
+    private int jwtExpirationMs = 86400000;
 
     public String generateJwtToken(Authentication authentication) {
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
@@ -49,16 +46,9 @@ public class JwtUtils {
         try {
             Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(authToken);
             return true;
-        } catch (MalformedJwtException e) {
-            logger.error("Invalid JWT token: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            logger.error("JWT token is expired: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            logger.error("JWT token is unsupported: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            logger.error("JWT claims string is empty: {}", e.getMessage());
+        } catch (JwtException e) {
+            log.error("Invalid JWT token: {}", e.getMessage());
         }
-
         return false;
     }
 }

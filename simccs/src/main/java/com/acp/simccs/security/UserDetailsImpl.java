@@ -1,4 +1,4 @@
-package com.acp.simccs.modules.identity.security;
+package com.acp.simccs.security;
 
 import com.acp.simccs.modules.identity.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
