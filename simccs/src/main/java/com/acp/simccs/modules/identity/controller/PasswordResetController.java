@@ -1,13 +1,13 @@
 package com.acp.simccs.modules.identity.controller;
 
 import com.acp.simccs.common.dto.ResponseDTO;
+import com.acp.simccs.common.service.NotificationService; // <--- NEW IMPORT
 import com.acp.simccs.modules.identity.dto.ForgotPasswordRequest;
 import com.acp.simccs.modules.identity.dto.PasswordResetRequest;
 import com.acp.simccs.modules.identity.model.PasswordResetToken;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.PasswordResetTokenRepository;
 import com.acp.simccs.modules.identity.repository.UserRepository;
-import com.acp.simccs.modules.identity.service.EmailService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class PasswordResetController {
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final EmailService emailService;
+    private final NotificationService notificationService; // <--- REPLACED EmailService
     private final PasswordEncoder encoder;
 
     @PostMapping("/forgot")
@@ -38,11 +38,9 @@ public class PasswordResetController {
         PasswordResetToken resetToken = new PasswordResetToken(token, user);
         passwordResetTokenRepository.save(resetToken);
 
-        String resetLink = "http://localhost:8080/reset-password?token=" + token;
-        emailService.sendSimpleMessage(user.getEmail(), "Password Reset Request",
-                "To reset your password, click the link below:\n" + resetLink);
+        // --- DELEGATED TO NOTIFICATION SERVICE ---
+        notificationService.sendPasswordReset(user.getEmail(), token);
 
-        // FIX: Added .<String> type hint
         return ResponseDTO.<String>success("Password reset email sent.", null).toResponseEntity();
     }
 
@@ -53,7 +51,6 @@ public class PasswordResetController {
 
         if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
             passwordResetTokenRepository.delete(resetToken);
-            // FIX: Added .<String> type hint
             return ResponseDTO.<String>error("Error: Token expired.").toResponseEntity();
         }
 
@@ -63,7 +60,6 @@ public class PasswordResetController {
 
         passwordResetTokenRepository.delete(resetToken);
 
-        // FIX: Added .<String> type hint
         return ResponseDTO.<String>success("Password successfully reset.", null).toResponseEntity();
     }
 }

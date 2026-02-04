@@ -25,4 +25,6 @@ public class ReportRequest {
     private Integer casualtyCount;
     
     private Set<String> categories; // e.g. ["Fire", "Riot"]
+
+    private java.util.List<String> mediaFiles;
 }
