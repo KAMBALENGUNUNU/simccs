@@ -41,6 +41,21 @@ public class CrisisReportController {
         return ResponseDTO.success(reportService.getAllReports()).toResponseEntity();
     }
 
+    // --- UPDATED SEARCH ENDPOINT ---
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('USER') or hasRole('JOURNALIST') or hasRole('EDITOR') or hasRole('ADMIN')")
+    @Operation(summary = "Search reports by status or author", security = @SecurityRequirement(name = "Bearer Authentication"))
+    public ResponseEntity<ResponseDTO<List<ReportResponse>>> searchReports(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long authorId) {
+
+        // Logic is now cleanly inside the service
+        List<ReportResponse> results = reportService.searchReports(status, authorId);
+
+        return ResponseDTO.success(results).toResponseEntity();
+    }
+    // -------------------------------
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN')")
     @Operation(summary = "Get report by ID", security = @SecurityRequirement(name = "Bearer Authentication"))
