@@ -3,9 +3,9 @@ package com.acp.simccs.modules.system.service;
 import com.acp.simccs.modules.system.model.ESystemStatus;
 import com.acp.simccs.modules.system.model.SystemBackup;
 import com.acp.simccs.modules.system.repository.SystemBackupRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,12 +17,11 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@RequiredArgsConstructor
 public class BackupService {
 
     private static final Logger logger = LoggerFactory.getLogger(BackupService.class);
-
-    @Autowired
-    private SystemBackupRepository backupRepository;
+    private final SystemBackupRepository backupRepository;
 
     @Value("${spring.datasource.username}")
     private String dbUser;
@@ -31,9 +30,8 @@ public class BackupService {
     private String dbPass;
 
     private final String DB_NAME = "simccs_db";
-    private final String BACKUP_DIR = "./backups/"; // Ensure this folder exists
+    private final String BACKUP_DIR = "./backups/";
 
-    // Cron expression: At 02:00 AM every day
     @Scheduled(cron = "0 0 2 * * ?")
     public void performScheduledBackup() {
         logger.info("Starting scheduled backup...");
@@ -50,27 +48,21 @@ public class BackupService {
         String filename = "backup_" + type + "_" + timestamp + ".sql";
         File backupFile = new File(BACKUP_DIR + filename);
 
-        // Create directory if not exists
         new File(BACKUP_DIR).mkdirs();
 
         SystemBackup backupRecord = new SystemBackup(filename, ESystemStatus.IN_PROGRESS);
         backupRepository.save(backupRecord);
 
         try {
-            // Command for PostgreSQL Dump
-            // Note: pg_dump must be in your System PATH
+            // FIXED: Using mysqldump instead of pg_dump
+            // Note: mysqldump needs to be in your System PATH
             ProcessBuilder pb = new ProcessBuilder(
-                    "pg_dump",
-                    "-U", dbUser,
-                    "-F", "c", // Custom format (compressed)
-                    "-b", // Include blobs
-                    "-v", // Verbose
-                    "-f", backupFile.getAbsolutePath(),
-                    DB_NAME
+                    "mysqldump",
+                    "-u", dbUser,
+                    "-p" + dbPass, // No space between -p and password
+                    "--databases", DB_NAME,
+                    "-r", backupFile.getAbsolutePath()
             );
-
-            // Set password environment variable
-            pb.environment().put("PGPASSWORD", dbPass);
 
             Process process = pb.start();
             boolean finished = process.waitFor(60, TimeUnit.SECONDS);
@@ -81,7 +73,7 @@ public class BackupService {
                 backupRecord.setLogMessage("Backup completed successfully.");
             } else {
                 backupRecord.setStatus(ESystemStatus.FAILED);
-                backupRecord.setLogMessage("Process failed or timed out. Exit code: " + process.exitValue());
+                backupRecord.setLogMessage("Process failed. Exit code: " + process.exitValue());
             }
 
         } catch (Exception e) {

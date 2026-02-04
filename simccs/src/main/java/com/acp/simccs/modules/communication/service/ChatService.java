@@ -7,12 +7,11 @@ import com.acp.simccs.modules.communication.repository.ChatChannelRepository;
 import com.acp.simccs.modules.communication.repository.ChatMessageRepository;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.UserRepository;
-import com.acp.simccs.modules.identity.service.SecurityService;
+import com.acp.simccs.security.SecurityService; // <--- IMPORTANT IMPORT
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,34 +20,29 @@ public class ChatService {
 
     @Autowired
     private ChatMessageRepository messageRepository;
-    
     @Autowired
     private ChatChannelRepository channelRepository;
-
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
-    private SecurityService securityService;
+    private SecurityService securityService; // Uses the centralized service
 
     @Transactional
     public MessageDTO saveMessage(MessageDTO messageDto, String senderEmail) {
         User sender = userRepository.findByEmail(senderEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        
+
         ChatChannel channel = channelRepository.findById(messageDto.getChannelId())
                 .orElseThrow(() -> new RuntimeException("Channel not found"));
 
         ChatMessage message = new ChatMessage();
         message.setSender(sender);
         message.setChannel(channel);
-        
-        // Encrypt content before saving
+        // Encrypt using the SecurityService from security package
         message.setContentEncrypted(securityService.encrypt(messageDto.getContent()));
-        
+
         ChatMessage savedMsg = messageRepository.save(message);
 
-        // Return DTO with plain text for immediate broadcast
         return new MessageDTO(
                 sender.getFullName(),
                 messageDto.getContent(),
@@ -56,12 +50,13 @@ public class ChatService {
                 savedMsg.getSentAt().toString()
         );
     }
-    
+
+    // ... keep getHistory and channel methods from previous response ...
     public List<MessageDTO> getHistory(Long channelId) {
         return messageRepository.findByChannelIdOrderBySentAtAsc(channelId).stream()
                 .map(msg -> new MessageDTO(
                         msg.getSender().getFullName(),
-                        securityService.decrypt(msg.getContentEncrypted()), // Decrypt on read
+                        securityService.decrypt(msg.getContentEncrypted()),
                         msg.getChannel().getId(),
                         msg.getSentAt().toString()
                 ))

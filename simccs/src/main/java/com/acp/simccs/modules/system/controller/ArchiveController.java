@@ -1,8 +1,9 @@
 package com.acp.simccs.modules.system.controller;
 
+import com.acp.simccs.common.dto.ResponseDTO;
 import com.acp.simccs.modules.system.model.SystemBackup;
 import com.acp.simccs.modules.system.service.BackupService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -11,23 +12,24 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/backups")
-@CrossOrigin(origins = "*", maxAge = 3600)
+@RequiredArgsConstructor
 public class ArchiveController {
 
-    @Autowired
-    private BackupService backupService;
+    private final BackupService backupService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<SystemBackup>> getBackupHistory() {
-        return ResponseEntity.ok(backupService.getBackupHistory());
+    // FIX: Explicitly defined List<SystemBackup> instead of wildcard
+    public ResponseEntity<ResponseDTO<List<SystemBackup>>> getBackupHistory() {
+        return ResponseDTO.success(backupService.getBackupHistory()).toResponseEntity();
     }
 
     @PostMapping("/trigger")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> triggerManualBackup() {
-        // Run in background to avoid blocking response
-        new Thread(() -> backupService.performManualBackup()).start();
-        return ResponseEntity.ok("Backup process started in background.");
+    // FIX: Changed return type to String (since we return a message, not a list)
+    public ResponseEntity<ResponseDTO<String>> triggerManualBackup() {
+        new Thread(backupService::performManualBackup).start();
+        // FIX: Added .<String> type hint to handle the null data
+        return ResponseDTO.<String>success("Backup process started in background.", null).toResponseEntity();
     }
 }

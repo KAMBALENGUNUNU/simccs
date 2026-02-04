@@ -1,4 +1,4 @@
-package com.acp.simccs.modules.identity.security;
+package com.acp.simccs.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
