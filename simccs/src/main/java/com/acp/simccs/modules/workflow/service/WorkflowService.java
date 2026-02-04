@@ -1,5 +1,6 @@
 package com.acp.simccs.modules.workflow.service;
 
+import com.acp.simccs.common.service.NotificationService; // <--- NEW IMPORT
 import com.acp.simccs.modules.crisis.model.CrisisReport;
 import com.acp.simccs.modules.crisis.model.EReportStatus;
 import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
@@ -31,6 +32,9 @@ public class WorkflowService {
     @Autowired
     private com.acp.simccs.modules.workflow.service.MisinformationService misinformationService;
 
+    @Autowired
+    private NotificationService notificationService; // <--- REPLACED SimpMessagingTemplate
+
     @Transactional
     public void processReview(Long reportId, ReviewRequest request, String editorEmail) {
         CrisisReport report = reportRepository.findById(reportId)
@@ -49,16 +53,28 @@ public class WorkflowService {
 
         // 2. Update Report Status based on Action
         if (request.getAction() == EWorkflowAction.APPROVE) {
-            report.setStatus(EReportStatus.VERIFIED);
+            // Logic: If already Verified -> Publish. If Submitted -> Verify.
+            if (report.getStatus() == EReportStatus.VERIFIED) {
+                report.setStatus(EReportStatus.PUBLISHED);
+            } else {
+                report.setStatus(EReportStatus.VERIFIED);
+            }
         } else if (request.getAction() == EWorkflowAction.REJECT) {
             report.setStatus(EReportStatus.REJECTED);
         } else if (request.getAction() == EWorkflowAction.REQUEST_REVISION) {
-            // Usually reverts to DRAFT or keeps SUBMITTED with a flag
-            report.setStatus(EReportStatus.DRAFT); 
+            report.setStatus(EReportStatus.DRAFT);
         }
 
         reportRepository.save(report);
-        reportRepository.save(report);
+
+        // 3. Send Notification (Email + WebSocket)
+        if (report.getAuthor() != null) {
+            notificationService.notifyReportStatusChange(
+                    report.getAuthor().getEmail(),
+                    report.getId(),
+                    report.getStatus().name()
+            );
+        }
     }
 
     public java.util.List<?> getVersions(Long reportId) {

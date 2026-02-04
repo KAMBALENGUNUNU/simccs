@@ -10,8 +10,13 @@ import com.acp.simccs.modules.crisis.repository.CategoryRepository;
 import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.UserRepository;
-import com.acp.simccs.security.SecurityService; // <--- IMPORTANT IMPORT
+import com.acp.simccs.security.SecurityService;
 import com.acp.simccs.modules.workflow.service.MisinformationService;
+import com.acp.simccs.modules.workflow.model.ReportVersion;
+import com.acp.simccs.modules.workflow.repository.ReportVersionRepository;
+import com.acp.simccs.modules.crisis.model.MediaAttachment;
+import com.acp.simccs.modules.crisis.repository.MediaAttachmentRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -26,6 +31,10 @@ import java.util.stream.Collectors;
 public class ReportService {
 
     @Autowired
+    private ReportVersionRepository reportVersionRepository;
+    @Autowired
+    private MediaAttachmentRepository mediaAttachmentRepository;
+    @Autowired
     private CrisisReportRepository reportRepository;
     @Autowired
     private UserRepository userRepository;
@@ -37,6 +46,32 @@ public class ReportService {
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private MisinformationService misinformationService;
+
+    // --- NEW SEARCH METHOD ---
+    public List<ReportResponse> searchReports(String status, Long authorId) {
+        List<CrisisReport> reports;
+
+        if (status != null && !status.isEmpty()) {
+            try {
+                // Convert String to Enum safely
+                EReportStatus statusEnum = EReportStatus.valueOf(status.toUpperCase());
+                reports = reportRepository.findByStatus(statusEnum);
+            } catch (IllegalArgumentException e) {
+                // If invalid status is passed, return empty list or throw error
+                throw new RuntimeException("Invalid status provided: " + status);
+            }
+        } else if (authorId != null) {
+            reports = reportRepository.findByAuthorId(authorId);
+        } else {
+            reports = reportRepository.findAll();
+        }
+
+        // Reuse the internal mapping logic efficiently
+        return reports.stream()
+                .map(r -> mapToResponse(r, false)) // false = keep encrypted for lists
+                .collect(Collectors.toList());
+    }
+    // -------------------------
 
     @Transactional
     public ReportResponse createReport(ReportRequest request, String userEmail) {
@@ -52,9 +87,10 @@ public class ReportService {
         report.setCasualtyCount(request.getCasualtyCount());
         report.setStatus(EReportStatus.SUBMITTED);
 
-        // Encrypt
+        // Encrypt content
         report.setContentEncrypted(securityService.encrypt(request.getContent()));
 
+        // Handle Categories
         Set<Category> categories = new HashSet<>();
         if (request.getCategories() != null) {
             for (String catName : request.getCategories()) {
@@ -65,7 +101,20 @@ public class ReportService {
         }
         report.setCategories(categories);
 
+        // Save first to generate ID
         CrisisReport savedReport = reportRepository.save(report);
+
+        // Handle Media Attachments
+        if (request.getMediaFiles() != null && !request.getMediaFiles().isEmpty()) {
+            for (String fileName : request.getMediaFiles()) {
+                MediaAttachment attachment = new MediaAttachment();
+                attachment.setReport(savedReport);
+                attachment.setFilePath(fileName);
+                attachment.setFileType("unknown");
+                attachment.setIsEncrypted(false);
+                mediaAttachmentRepository.save(attachment);
+            }
+        }
 
         // AI Scan & Event
         misinformationService.autoScanReport(savedReport);
@@ -76,14 +125,14 @@ public class ReportService {
 
     public List<ReportResponse> getAllReports() {
         return reportRepository.findAll().stream()
-                .map(r -> mapToResponse(r, false)) // List view: don't decrypt body
+                .map(r -> mapToResponse(r, false))
                 .collect(Collectors.toList());
     }
 
     public ReportResponse getReportById(Long id) {
         CrisisReport report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
-        return mapToResponse(report, true); // Detail view: decrypt body
+        return mapToResponse(report, true);
     }
 
     @Transactional
@@ -91,13 +140,29 @@ public class ReportService {
         CrisisReport report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
+        // Versioning Logic
+        ReportVersion version = new ReportVersion();
+        version.setReport(report);
+        User currentUser = userRepository.findByEmail(userEmail).orElse(null);
+        version.setEditor(currentUser);
+        version.setContentSnapshotEncrypted(report.getContentEncrypted());
+        version.setChangeReason("Update request by " + userEmail);
+
+        // Use repo to count versions. Ensure ReportVersionRepository has countByReportId
+        // If not, use: reportVersionRepository.findByReportId(id).size()
+        int currentCount = reportVersionRepository.findByReportId(id).size();
+        version.setVersionNumber(currentCount + 1);
+
+        reportVersionRepository.save(version);
+
+        // Update Fields
         report.setTitle(request.getTitle());
         report.setSummary(request.getSummary());
         report.setLocationLat(request.getLatitude());
         report.setLocationLng(request.getLongitude());
         report.setCasualtyCount(request.getCasualtyCount());
-
         report.setContentEncrypted(securityService.encrypt(request.getContent()));
+        report.setStatus(EReportStatus.DRAFT);
 
         return mapToResponse(reportRepository.save(report), true);
     }
