@@ -1,6 +1,7 @@
 package com.acp.simccs.modules.identity.controller;
 
 import com.acp.simccs.common.dto.ResponseDTO;
+import com.acp.simccs.common.service.NotificationService; // <--- NEW IMPORT
 import com.acp.simccs.modules.identity.model.AuditLog;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.AuditLogRepository;
@@ -22,6 +23,7 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
+    private final NotificationService notificationService; // <--- INJECTED
 
     @GetMapping("/users")
     public ResponseEntity<ResponseDTO<List<User>>> getAllUsers(@RequestParam(required = false) Boolean is_enabled) {
@@ -41,7 +43,12 @@ public class AdminController {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         user.setIsEnabled(true);
         userRepository.save(user);
+
         auditLogRepository.save(new AuditLog("APPROVE_USER", "ADMIN", "Approved user " + user.getEmail()));
+
+        // --- NOTIFICATION ---
+        notificationService.notifyUserAccountApproved(user.getEmail());
+
         return ResponseDTO.success("User approved", null).toResponseEntity();
     }
 
