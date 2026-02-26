@@ -47,28 +47,27 @@ public class ReportService {
     @Autowired
     private MisinformationService misinformationService;
 
-    // --- NEW SEARCH METHOD ---
-    public List<ReportResponse> searchReports(String status, Long authorId) {
-        List<CrisisReport> reports;
+    // --- UPDATED PRODUCTION SEARCH METHOD ---
+    public List<ReportResponse> searchReports(String statusStr, Long authorId) {
+        EReportStatus status = null;
 
-        if (status != null && !status.isEmpty()) {
+        // 1. Safe String -> Enum conversion
+        // We accept "all", null, or empty string as "no filter"
+        if (statusStr != null && !statusStr.isEmpty() && !statusStr.equalsIgnoreCase("all")) {
             try {
-                // Convert String to Enum safely
-                EReportStatus statusEnum = EReportStatus.valueOf(status.toUpperCase());
-                reports = reportRepository.findByStatus(statusEnum);
+                status = EReportStatus.valueOf(statusStr.toUpperCase());
             } catch (IllegalArgumentException e) {
-                // If invalid status is passed, return empty list or throw error
-                throw new RuntimeException("Invalid status provided: " + status);
+                // If invalid status provided, we ignore the filter (or you could throw exception)
+                status = null;
             }
-        } else if (authorId != null) {
-            reports = reportRepository.findByAuthorId(authorId);
-        } else {
-            reports = reportRepository.findAll();
         }
 
-        // Reuse the internal mapping logic efficiently
+        // 2. Call the optimized Repository Query
+        List<CrisisReport> reports = reportRepository.searchReports(status, authorId);
+
+        // 3. Map to DTO
         return reports.stream()
-                .map(r -> mapToResponse(r, false)) // false = keep encrypted for lists
+                .map(r -> mapToResponse(r, false)) // false = keep encrypted for list views
                 .collect(Collectors.toList());
     }
     // -------------------------
@@ -148,8 +147,6 @@ public class ReportService {
         version.setContentSnapshotEncrypted(report.getContentEncrypted());
         version.setChangeReason("Update request by " + userEmail);
 
-        // Use repo to count versions. Ensure ReportVersionRepository has countByReportId
-        // If not, use: reportVersionRepository.findByReportId(id).size()
         int currentCount = reportVersionRepository.findByReportId(id).size();
         version.setVersionNumber(currentCount + 1);
 
@@ -162,7 +159,9 @@ public class ReportService {
         report.setLocationLng(request.getLongitude());
         report.setCasualtyCount(request.getCasualtyCount());
         report.setContentEncrypted(securityService.encrypt(request.getContent()));
-        report.setStatus(EReportStatus.DRAFT);
+
+        // Reset status to DRAFT or SUBMITTED on update if it was rejected/published
+        // report.setStatus(EReportStatus.DRAFT);
 
         return mapToResponse(reportRepository.save(report), true);
     }

@@ -1,7 +1,7 @@
 package com.acp.simccs.modules.identity.controller;
 
 import com.acp.simccs.common.dto.ResponseDTO;
-import com.acp.simccs.common.service.NotificationService; // <--- NEW IMPORT
+import com.acp.simccs.common.service.NotificationService;
 import com.acp.simccs.modules.identity.dto.*;
 import com.acp.simccs.modules.identity.model.*;
 import com.acp.simccs.modules.identity.repository.RoleRepository;
@@ -39,7 +39,7 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
-    private final NotificationService notificationService; // <--- INJECTED
+    private final NotificationService notificationService;
 
     @PostMapping("/login")
     @Operation(summary = "Login user")
@@ -105,8 +105,9 @@ public class AuthController {
         } else {
             strRoles.forEach(role -> {
                 switch (role) {
-                    case "admin" -> roles.add(roleRepository.findByName(ERole.ROLE_ADMIN).orElseThrow());
-                    case "editor" -> roles.add(roleRepository.findByName(ERole.ROLE_EDITOR).orElseThrow());
+                    // FIX: Matching standard Spring Security naming convention used by frontend Enums
+                    case "ROLE_ADMIN" -> roles.add(roleRepository.findByName(ERole.ROLE_ADMIN).orElseThrow());
+                    case "ROLE_EDITOR" -> roles.add(roleRepository.findByName(ERole.ROLE_EDITOR).orElseThrow());
                     default -> roles.add(roleRepository.findByName(ERole.ROLE_JOURNALIST).orElseThrow());
                 }
             });

@@ -49,7 +49,7 @@ public class CrisisReportController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long authorId) {
 
-        // Logic is now cleanly inside the service
+        // Logic delegates to the Service's robust search method
         List<ReportResponse> results = reportService.searchReports(status, authorId);
 
         return ResponseDTO.success(results).toResponseEntity();

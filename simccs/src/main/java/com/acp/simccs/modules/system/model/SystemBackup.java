@@ -18,14 +18,15 @@ public class SystemBackup {
     @Column(nullable = false)
     private String filename;
 
+    // FIX: Initialize to 0.0 to prevent NullPointerException
     @Column(name = "file_size_mb")
-    private Double fileSizeMb;
+    private Double fileSizeMb = 0.0;
 
     @Enumerated(EnumType.STRING)
     private ESystemStatus status;
 
     @Column(columnDefinition = "TEXT")
-    private String logMessage; // Error details if failed
+    private String logMessage;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -33,5 +34,6 @@ public class SystemBackup {
     public SystemBackup(String filename, ESystemStatus status) {
         this.filename = filename;
         this.status = status;
+        this.fileSizeMb = 0.0; // Good practice to set it in constructor too
     }
 }

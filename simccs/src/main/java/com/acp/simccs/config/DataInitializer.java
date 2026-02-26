@@ -30,8 +30,8 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // 2. Initialize Super Admin
-        if (!userRepository.existsByEmail("admin@simccs.com")) {
-            User admin = new User("admin@simccs.com", encoder.encode("admin123"), "Super Admin");
+        if (!userRepository.existsByEmail("danielngun04@gmail.com")) {
+            User admin = new User("danielngun04@gmail.com", encoder.encode("simccs123"), "Super Admin");
             admin.setIsEnabled(true); // Auto-enable
 
             Set<Role> roles = new HashSet<>();
@@ -41,7 +41,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setRoles(roles);
 
             userRepository.save(admin);
-            System.out.println("✅ SUPER ADMIN CREATED: admin@simccs.com / admin123");
+            System.out.println("✅ SUPER ADMIN CREATED: danielngun04@gmail.com / simccs123");
         }
     }
 }

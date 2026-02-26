@@ -8,7 +8,7 @@ import java.util.Set;
 public class ReportResponse {
     private Long id;
     private String title;
-    private String content; // Depending on permissions, this might be decrypted or null
+    private String content;
     private String summary;
     private String authorName;
     private String status;

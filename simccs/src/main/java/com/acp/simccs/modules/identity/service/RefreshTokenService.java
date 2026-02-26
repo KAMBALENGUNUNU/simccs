@@ -1,6 +1,7 @@
 package com.acp.simccs.modules.identity.service;
 
 import com.acp.simccs.modules.identity.model.RefreshToken;
+import com.acp.simccs.modules.identity.model.User; // Added import
 import com.acp.simccs.modules.identity.repository.RefreshTokenRepository;
 import com.acp.simccs.modules.identity.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,12 +29,21 @@ public class RefreshTokenService {
     }
 
     public RefreshToken createRefreshToken(Long userId) {
-        RefreshToken refreshToken = new RefreshToken();
+        // 1. Fetch the user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        refreshToken.setUser(userRepository.findById(userId).get());
+        // 2. Check if this user already has a token
+        // If yes, retrieve it to update. If no, create a new instance.
+        RefreshToken refreshToken = refreshTokenRepository.findByUser(user)
+                .orElse(new RefreshToken());
+
+        // 3. Set or Update fields
+        refreshToken.setUser(user);
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
         refreshToken.setToken(UUID.randomUUID().toString());
 
+        // 4. Save (This performs an UPDATE if ID exists, or INSERT if new)
         return refreshTokenRepository.save(refreshToken);
     }
 

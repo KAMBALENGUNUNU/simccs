@@ -11,14 +11,14 @@ import java.util.List;
 
 @Configuration
 public class CorsConfig {
-
+/**
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
         // Allow all origins or specify frontend URLs
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(List.of("http://localhost:5173"));
         config.setAllowedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowCredentials(true);
@@ -26,5 +26,5 @@ public class CorsConfig {
 
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
-    }
+    } **/
 }

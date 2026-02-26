@@ -1,6 +1,8 @@
 package com.acp.simccs.modules.workflow.controller;
 
 import com.acp.simccs.common.dto.ResponseDTO;
+import com.acp.simccs.modules.misinformation.dto.AiAnalysisResponse;
+import com.acp.simccs.modules.workflow.service.MisinformationService;
 import com.acp.simccs.modules.workflow.dto.ReviewRequest;
 import com.acp.simccs.modules.workflow.service.WorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class WorkflowController {
 
     private final WorkflowService workflowService;
+    private final MisinformationService misinformationService;
 
     @PostMapping("/reports/{id}/status")
     @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN')")
@@ -55,5 +58,13 @@ public class WorkflowController {
     @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN')")
     public ResponseEntity<?> getFlaggedReports() {
         return ResponseDTO.success(workflowService.getFlaggedReports()).toResponseEntity();
+    }
+
+    @GetMapping("/reports/{id}/ai-check")
+    @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN')")
+    @Operation(summary = "Perform an on-demand AI misinformation check for a specific report")
+    public ResponseEntity<?> checkReportOnDemand(@PathVariable Long id) {
+        AiAnalysisResponse response = misinformationService.checkReportOnDemand(id);
+        return ResponseDTO.success(response).toResponseEntity();
     }
 }
