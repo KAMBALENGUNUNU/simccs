@@ -4,5 +4,6 @@ public enum EWorkflowAction {
     APPROVE,
     REJECT,
     REQUEST_REVISION,
+    PUBLISH,
     FLAG_MISINFORMATION
 }

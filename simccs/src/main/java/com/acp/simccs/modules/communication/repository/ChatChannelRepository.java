@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface ChatChannelRepository extends JpaRepository<ChatChannel, Long> {
     Optional<ChatChannel> findByName(String name);
+
+    Optional<ChatChannel> findByReportId(Long reportId);
 }

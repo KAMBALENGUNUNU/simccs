@@ -11,6 +11,7 @@ import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.UserRepository;
 import com.acp.simccs.security.SecurityService;
+import com.acp.simccs.modules.communication.service.ChatService;
 import com.acp.simccs.modules.workflow.service.MisinformationService;
 import com.acp.simccs.modules.workflow.model.ReportVersion;
 import com.acp.simccs.modules.workflow.repository.ReportVersionRepository;
@@ -46,6 +47,8 @@ public class ReportService {
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private MisinformationService misinformationService;
+    @Autowired
+    private ChatService chatService;
 
     // --- UPDATED PRODUCTION SEARCH METHOD ---
     public List<ReportResponse> searchReports(String statusStr, Long authorId) {
@@ -57,7 +60,8 @@ public class ReportService {
             try {
                 status = EReportStatus.valueOf(statusStr.toUpperCase());
             } catch (IllegalArgumentException e) {
-                // If invalid status provided, we ignore the filter (or you could throw exception)
+                // If invalid status provided, we ignore the filter (or you could throw
+                // exception)
                 status = null;
             }
         }
@@ -103,6 +107,9 @@ public class ReportService {
         // Save first to generate ID
         CrisisReport savedReport = reportRepository.save(report);
 
+        // Auto-create chat channel
+        chatService.createReportChannel(savedReport.getId(), savedReport.getTitle());
+
         // Handle Media Attachments
         if (request.getMediaFiles() != null && !request.getMediaFiles().isEmpty()) {
             for (String fileName : request.getMediaFiles()) {
@@ -139,10 +146,28 @@ public class ReportService {
         CrisisReport report = reportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
 
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean isEditor = currentUser.getRoles().stream()
+                .anyMatch(role -> role.getName() == com.acp.simccs.modules.identity.model.ERole.ROLE_EDITOR);
+
+        EReportStatus status = report.getStatus();
+
+        // Rule A
+        if ((status == EReportStatus.SUBMITTED || status == EReportStatus.VERIFIED) && !isEditor) {
+            throw new RuntimeException("Unauthorized: Once submitted, only an Editor can modify this report.");
+        }
+
+        // Rule B
+        if ((status == EReportStatus.DRAFT || status == EReportStatus.REJECTED)
+                && !currentUser.getId().equals(report.getAuthor().getId())) {
+            throw new RuntimeException("Unauthorized: You can only edit your own drafts.");
+        }
+
         // Versioning Logic
         ReportVersion version = new ReportVersion();
         version.setReport(report);
-        User currentUser = userRepository.findByEmail(userEmail).orElse(null);
         version.setEditor(currentUser);
         version.setContentSnapshotEncrypted(report.getContentEncrypted());
         version.setChangeReason("Update request by " + userEmail);

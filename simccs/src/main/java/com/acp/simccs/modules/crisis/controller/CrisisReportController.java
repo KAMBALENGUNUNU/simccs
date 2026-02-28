@@ -57,16 +57,17 @@ public class CrisisReportController {
     // -------------------------------
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('JOURNALIST') or hasRole('EDITOR') or hasRole('ADMIN')")
     @Operation(summary = "Get report by ID", security = @SecurityRequirement(name = "Bearer Authentication"))
     public ResponseEntity<ResponseDTO<ReportResponse>> getReportById(@PathVariable Long id) {
         return ResponseDTO.success(reportService.getReportById(id)).toResponseEntity();
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('JOURNALIST') or hasRole('EDITOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('JOURNALIST') or hasRole('EDITOR')")
     @Operation(summary = "Update a report")
-    public ResponseEntity<ResponseDTO<ReportResponse>> updateReport(@PathVariable Long id, @Valid @RequestBody ReportRequest request) {
+    public ResponseEntity<ResponseDTO<ReportResponse>> updateReport(@PathVariable Long id,
+            @Valid @RequestBody ReportRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseDTO.success(reportService.updateReport(id, request, email)).toResponseEntity();
     }

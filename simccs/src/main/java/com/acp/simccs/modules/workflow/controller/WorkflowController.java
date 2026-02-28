@@ -60,6 +60,13 @@ public class WorkflowController {
         return ResponseDTO.success(workflowService.getFlaggedReports()).toResponseEntity();
     }
 
+    @GetMapping("/reports/{id}/actions")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get admin-only audit logs for a report")
+    public ResponseEntity<?> getReportActions(@PathVariable Long id) {
+        return ResponseDTO.success(workflowService.getReportActions(id)).toResponseEntity();
+    }
+
     @GetMapping("/reports/{id}/ai-check")
     @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN')")
     @Operation(summary = "Perform an on-demand AI misinformation check for a specific report")

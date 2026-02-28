@@ -2,17 +2,42 @@ package com.acp.simccs.common.service;
 
 import com.acp.simccs.common.util.EmailTemplateUtil;
 import com.acp.simccs.modules.identity.service.EmailService;
+import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
 
     private final EmailService emailService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final Map<String, CopyOnWriteArrayList<SseEmitter>> userEmitters = new ConcurrentHashMap<>();
+
+    public SseEmitter subscribe(String userEmail) {
+        SseEmitter emitter = new SseEmitter(3600000L); // 1 hour timeout
+        userEmitters.computeIfAbsent(userEmail, id -> new CopyOnWriteArrayList<>()).add(emitter);
+
+        emitter.onCompletion(() -> removeEmitter(userEmail, emitter));
+        emitter.onTimeout(() -> removeEmitter(userEmail, emitter));
+        emitter.onError((e) -> removeEmitter(userEmail, emitter));
+
+        return emitter;
+    }
+
+    private void removeEmitter(String userEmail, SseEmitter emitter) {
+        CopyOnWriteArrayList<SseEmitter> emitters = userEmitters.get(userEmail);
+        if (emitters != null) {
+            emitters.remove(emitter);
+            if (emitters.isEmpty()) {
+                userEmitters.remove(userEmail);
+            }
+        }
+    }
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -53,9 +78,32 @@ public class NotificationService {
                 link, "View Report");
         emailService.sendHtmlMessage(to, "Update on Report #" + reportId, html);
 
-        // Real-time WebSocket Notification
-        messagingTemplate.convertAndSendToUser(to, "/queue/notifications",
-                "Report #" + reportId + " is now " + newStatus);
+        // Real-time SSE Notification
+        CopyOnWriteArrayList<SseEmitter> emitters = userEmitters.get(to);
+        if (emitters != null) {
+            String payload = "Report #" + reportId + " is now " + newStatus;
+            for (SseEmitter emitter : emitters) {
+                try {
+                    emitter.send(SseEmitter.event().name("notification").data(payload));
+                } catch (IOException e) {
+                    emitter.completeWithError(e);
+                    removeEmitter(to, emitter);
+                }
+            }
+        }
+    }
+
+    public void broadcastNotification(String payload) {
+        for (CopyOnWriteArrayList<SseEmitter> emitters : userEmitters.values()) {
+            for (SseEmitter emitter : emitters) {
+                try {
+                    emitter.send(SseEmitter.event().name("notification").data(payload));
+                } catch (IOException e) {
+                    emitter.completeWithError(e);
+                    // Safe removal will happen via cleanup callbacks
+                }
+            }
+        }
     }
 
     // 3. System Alerts

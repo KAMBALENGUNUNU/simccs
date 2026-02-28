@@ -22,7 +22,9 @@ public class ChatChannel {
     @Column(nullable = false)
     private String type;
 
-    private String description; 
+    private String description;
+
+    private Long reportId;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 

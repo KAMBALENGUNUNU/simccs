@@ -23,8 +23,9 @@ import org.springframework.web.cors.CorsConfiguration; // IMPORT ADDED
 import org.springframework.web.cors.CorsConfigurationSource; // IMPORT ADDED
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // IMPORT ADDED
 
+import jakarta.servlet.DispatcherType;
 import java.util.Arrays; // IMPORT ADDED
-import java.util.List;   // IMPORT ADDED
+import java.util.List; // IMPORT ADDED
 
 @Configuration
 @EnableWebSecurity
@@ -40,25 +41,23 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
-                // 1. THIS LINE IS CRITICAL: It tells Spring Security to use the corsConfigurationSource bean below
+                // 1. THIS LINE IS CRITICAL: It tells Spring Security to use the
+                // corsConfigurationSource bean below
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers(
+                                "/error",
                                 "/api/auth/**",
                                 "/ws/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
+                                "/swagger-ui.html")
+                        .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated()
-                )
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .exceptionHandling(exception ->
-                        exception.authenticationEntryPoint(jwtAuthenticationEntryPoint)
-                )
+                        .anyRequest().authenticated())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -75,8 +74,10 @@ public class SecurityConfig {
         // Allow all standard HTTP methods
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
-        // Allow the headers your frontend sends (Authorization is the most important one here)
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        // Allow the headers your frontend sends (Authorization is the most important
+        // one here)
+        configuration.setAllowedHeaders(
+                Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
 
         // Allow credentials (cookies/auth headers) to be sent
         configuration.setAllowCredentials(true);

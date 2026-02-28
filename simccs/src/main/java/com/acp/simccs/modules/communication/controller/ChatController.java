@@ -6,12 +6,10 @@ import com.acp.simccs.modules.communication.dto.MessageDTO;
 import com.acp.simccs.modules.communication.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -21,18 +19,29 @@ public class ChatController {
 
     private final ChatService chatService;
 
-    // WebSocket Endpoint (Keeps raw return for STOMP)
-    @MessageMapping("/chat/{channelId}")
-    @SendTo("/topic/channel/{channelId}")
-    public MessageDTO sendMessage(@Payload MessageDTO messageDto,
-                                  @DestinationVariable Long channelId,
-                                  SimpMessageHeaderAccessor headerAccessor) {
+    // SSE Streaming Endpoint
+    @GetMapping(value = "/api/chat/channels/{channelId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamMessages(@PathVariable Long channelId) {
+        return chatService.subscribeToChannel(channelId);
+    }
+
+    // REST Endpoint for sending messages
+    @PostMapping("/api/chat/channels/{channelId}/messages")
+    public ResponseEntity<ResponseDTO<MessageDTO>> sendMessage(
+            @PathVariable Long channelId,
+            @RequestBody MessageDTO messageDto) {
+
         String senderEmail = "journalist@acp.com";
-        if(headerAccessor.getUser() != null) {
-            senderEmail = headerAccessor.getUser().getName();
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && !authentication.getName().equals("anonymousUser")) {
+            senderEmail = authentication.getName();
         }
+
         messageDto.setChannelId(channelId);
-        return chatService.saveMessage(messageDto, senderEmail);
+        MessageDTO savedMessage = chatService.saveMessage(messageDto, senderEmail);
+        return ResponseDTO.success(savedMessage).toResponseEntity();
     }
 
     // REST Endpoints (Fixed Generics)
@@ -49,5 +58,10 @@ public class ChatController {
     @PostMapping("/api/chat/channels")
     public ResponseEntity<ResponseDTO<ChannelDTO>> createChannel(@RequestBody ChannelDTO channelDTO) {
         return ResponseDTO.success(chatService.createChannel(channelDTO)).toResponseEntity();
+    }
+
+    @GetMapping("/api/chat/reports/{reportId}/channel")
+    public ResponseEntity<ResponseDTO<ChannelDTO>> getReportChannel(@PathVariable Long reportId) {
+        return ResponseDTO.success(chatService.getReportChannel(reportId)).toResponseEntity();
     }
 }
