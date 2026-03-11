@@ -1,6 +1,5 @@
 package com.acp.simccs.security;
 
-
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -24,6 +23,16 @@ public class JwtService {
         return generateTokenFromUsername(userPrincipal.getUsername());
     }
 
+    public String generateMfaToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("isMfaToken", true)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + 5 * 60 * 1000)) // 5 minutes validity
+                .signWith(key(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     public String generateTokenFromUsername(String username) {
         return Jwts.builder()
                 .setSubject(username)
@@ -44,10 +53,30 @@ public class JwtService {
 
     public boolean validateJwtToken(String authToken) {
         try {
-            Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(authToken);
+            Jws<Claims> claims = Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(authToken);
+            Boolean isMfa = claims.getBody().get("isMfaToken", Boolean.class);
+            if (isMfa != null && isMfa) {
+                log.error("Cannot use MFA token for standard authentication");
+                return false;
+            }
             return true;
         } catch (JwtException e) {
             log.error("Invalid JWT token: {}", e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean validateMfaToken(String authToken) {
+        try {
+            Jws<Claims> claims = Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(authToken);
+            Boolean isMfa = claims.getBody().get("isMfaToken", Boolean.class);
+            if (isMfa != null && isMfa) {
+                return true;
+            }
+            log.error("Token is not an MFA token");
+            return false;
+        } catch (JwtException e) {
+            log.error("Invalid MFA JWT token: {}", e.getMessage());
         }
         return false;
     }

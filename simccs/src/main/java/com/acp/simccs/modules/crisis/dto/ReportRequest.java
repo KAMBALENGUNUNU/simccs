@@ -22,8 +22,10 @@ public class ReportRequest {
     @NotNull
     private Double longitude;
 
+    private String locationName;
+
     private Integer casualtyCount;
-    
+
     private Set<String> categories; // e.g. ["Fire", "Riot"]
 
     private java.util.List<String> mediaFiles;

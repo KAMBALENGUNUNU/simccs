@@ -53,10 +53,15 @@ public class NotificationService {
         emailService.sendHtmlMessage(to, "Reset Your Password", html);
     }
 
-    public void notifyAdminOfNewUser(String userEmail, String userName) {
+    public void notifyAdminOfNewUser(String userEmail, String userName, String nationalId) {
         String link = baseUrl + "/admin/dashboard";
+
+        String idText = (nationalId != null && !nationalId.isBlank())
+                ? "with National ID: " + nationalId
+                : "without a National ID";
+
         String html = EmailTemplateUtil.getBasicTemplate("New User Registration",
-                "User " + userName + " (" + userEmail + ") has registered and is awaiting approval.",
+                "User " + userName + " (" + userEmail + ") " + idText + " has registered and is awaiting approval.",
                 link, "Go to Admin Panel");
         emailService.sendHtmlMessage(adminEmail, "Action Required: New User", html);
     }
@@ -70,12 +75,12 @@ public class NotificationService {
     }
 
     // 2. Report Workflow
-    public void notifyReportStatusChange(String to, Long reportId, String newStatus) {
+    public void notifyReportStatusChange(String to, Long reportId, String newStatus, String actorName, String comment) {
         // Email Notification
         String link = baseUrl + "/reports/" + reportId;
-        String html = EmailTemplateUtil.getBasicTemplate("Report Status Update",
+        String html = EmailTemplateUtil.getWorkflowTemplate("Report Status Update",
                 "Your report (ID: " + reportId + ") has been moved to status: <b>" + newStatus + "</b>",
-                link, "View Report");
+                actorName, comment, link, "View Report");
         emailService.sendHtmlMessage(to, "Update on Report #" + reportId, html);
 
         // Real-time SSE Notification

@@ -12,10 +12,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "users", 
-       uniqueConstraints = { 
-           @UniqueConstraint(columnNames = "email") 
-       })
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "email")
+})
 @Data
 @NoArgsConstructor
 public class User {
@@ -36,6 +35,9 @@ public class User {
     @Column(name = "full_name")
     private String fullName;
 
+    @Column(name = "national_id")
+    private String nationalId;
+
     @Column(name = "is_enabled")
     private Boolean isEnabled = false; // Default: Account Locked until Admin approves
 
@@ -49,14 +51,13 @@ public class User {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "user_roles", 
-               joinColumns = @JoinColumn(name = "user_id"), 
-               inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
-    public User(String email, String passwordHash, String fullName) {
+    public User(String email, String passwordHash, String fullName, String nationalId) {
         this.email = email;
         this.passwordHash = passwordHash;
         this.fullName = fullName;
+        this.nationalId = nationalId;
     }
 }

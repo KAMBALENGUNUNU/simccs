@@ -31,7 +31,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // 2. Initialize Super Admin
         if (!userRepository.existsByEmail("danielngun04@gmail.com")) {
-            User admin = new User("danielngun04@gmail.com", encoder.encode("simccs123"), "Super Admin");
+            User admin = new User("danielngun04@gmail.com", encoder.encode("simccs123"), "Super Admin", null);
             admin.setIsEnabled(true); // Auto-enable
 
             Set<Role> roles = new HashSet<>();

@@ -33,6 +33,7 @@ public class CrisisReport {
 
     private Double locationLat;
     private Double locationLng;
+    private String locationName;
 
     @Enumerated(EnumType.STRING)
     private EReportStatus status = EReportStatus.DRAFT;
@@ -47,12 +48,12 @@ public class CrisisReport {
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "report_categories",
-            joinColumns = @JoinColumn(name = "report_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id"))
+    @JoinTable(name = "report_categories", joinColumns = @JoinColumn(name = "report_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
     private Set<Category> categories = new HashSet<>();
-    
+
     // Helper method to update timestamp before update
     @PreUpdate
-    public void setLastUpdate() {  this.updatedAt = LocalDateTime.now(); }
+    public void setLastUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

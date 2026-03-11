@@ -3,6 +3,7 @@ package com.acp.simccs.modules.crisis.controller;
 import com.acp.simccs.common.dto.ResponseDTO;
 import com.acp.simccs.modules.crisis.model.CrisisReport;
 import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
+import com.acp.simccs.modules.workflow.repository.MisinformationFlagRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class AnalyticsController {
 
     private final CrisisReportRepository crisisReportRepository;
+    private final MisinformationFlagRepository misinformationFlagRepository;
 
     @GetMapping("/dashboard")
     public ResponseEntity<ResponseDTO<Map<String, Object>>> getDashboardStats() {
@@ -30,17 +32,26 @@ public class AnalyticsController {
 
         // 1. Basic Counters
         stats.put("totalReports", allReports.size());
-        stats.put("totalCasualties", allReports.stream().mapToInt(r -> r.getCasualtyCount() == null ? 0 : r.getCasualtyCount()).sum());
+        stats.put("totalCasualties",
+                allReports.stream().mapToInt(r -> r.getCasualtyCount() == null ? 0 : r.getCasualtyCount()).sum());
 
         // 2. Count by Status (Pending, Approved, etc)
-        stats.put("pendingReports", allReports.stream().filter(r -> "SUBMITTED".equals(r.getStatus().name()) || "DRAFT".equals(r.getStatus().name())).count());
+        stats.put("pendingReports", allReports.stream()
+                .filter(r -> "SUBMITTED".equals(r.getStatus().name()) || "DRAFT".equals(r.getStatus().name())).count());
         stats.put("approvedReports", allReports.stream().filter(r -> "VERIFIED".equals(r.getStatus().name())).count());
         stats.put("rejectedReports", allReports.stream().filter(r -> "REJECTED".equals(r.getStatus().name())).count());
-        stats.put("flaggedReports", 0); // Logic for flagged if needed
+
+        long flaggedCount = misinformationFlagRepository.findAll().stream()
+                .filter(flag -> flag.getReport() != null)
+                .map(flag -> flag.getReport().getId())
+                .distinct()
+                .count();
+        stats.put("flaggedReports", flaggedCount);
 
         // 3. Reports by Status Map
         Map<String, Long> reportsByStatus = allReports.stream()
                 .collect(Collectors.groupingBy(r -> r.getStatus().name(), Collectors.counting()));
+        reportsByStatus.put("FLAGGED", flaggedCount);
         stats.put("reportsByStatus", reportsByStatus);
 
         // 4. Recent Activity (Last 5 reports)

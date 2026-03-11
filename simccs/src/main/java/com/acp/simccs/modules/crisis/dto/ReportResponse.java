@@ -11,10 +11,13 @@ public class ReportResponse {
     private String content;
     private String summary;
     private String authorName;
+    private Long authorId;
     private String status;
     private Double latitude;
     private Double longitude;
+    private String locationName;
     private Integer casualtyCount;
     private LocalDateTime createdAt;
     private Set<String> categories;
+    private java.util.List<String> mediaFiles;
 }

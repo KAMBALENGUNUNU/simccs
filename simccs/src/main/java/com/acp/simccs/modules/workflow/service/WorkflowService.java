@@ -47,7 +47,7 @@ public class WorkflowService {
         // Security Check for PUBLISH
         if (request.getAction() == EWorkflowAction.PUBLISH) {
             boolean isAdmin = editor.getRoles().stream()
-                    .anyMatch(role -> role.getName() == ERole.ROLE_ADMIN);
+                    .anyMatch(role -> ERole.ROLE_ADMIN.equals(role.getName()));
             if (!isAdmin) {
                 throw new RuntimeException("Unauthorized: Only Admins can publish reports.");
             }
@@ -84,7 +84,9 @@ public class WorkflowService {
             notificationService.notifyReportStatusChange(
                     report.getAuthor().getEmail(),
                     report.getId(),
-                    report.getStatus().name());
+                    report.getStatus().name(),
+                    editor.getFullName(),
+                    request.getComment());
         }
     }
 

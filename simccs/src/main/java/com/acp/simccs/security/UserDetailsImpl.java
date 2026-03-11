@@ -19,17 +19,19 @@ public class UserDetailsImpl implements UserDetails {
 
     @JsonIgnore
     private String password;
-    
+
     private boolean isEnabled; // For Admin Approval
+    private boolean isMfaEnabled;
 
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String email, String password, boolean isEnabled,
-                           Collection<? extends GrantedAuthority> authorities) {
+    public UserDetailsImpl(Long id, String email, String password, boolean isEnabled, boolean isMfaEnabled,
+            Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.isEnabled = isEnabled;
+        this.isMfaEnabled = isMfaEnabled;
         this.authorities = authorities;
     }
 
@@ -43,6 +45,7 @@ public class UserDetailsImpl implements UserDetails {
                 user.getEmail(),
                 user.getPasswordHash(),
                 user.getIsEnabled(), // Important: We pass the enabled status here
+                user.isMfaEnabled(),
                 authorities);
     }
 
@@ -87,6 +90,10 @@ public class UserDetailsImpl implements UserDetails {
     @Override
     public boolean isEnabled() {
         return isEnabled; // Returns false if admin hasn't approved
+    }
+
+    public boolean isMfaEnabled() {
+        return isMfaEnabled;
     }
 
     @Override

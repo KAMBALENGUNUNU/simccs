@@ -26,7 +26,7 @@ public class WorkflowAction {
     private User actor; // Editor or Admin
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "action_type")
+    @Column(name = "action_type", length = 50)
     private EWorkflowAction actionType;
 
     @Column(columnDefinition = "TEXT")

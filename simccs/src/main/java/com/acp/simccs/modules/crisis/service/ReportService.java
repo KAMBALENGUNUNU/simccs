@@ -49,6 +49,8 @@ public class ReportService {
     private MisinformationService misinformationService;
     @Autowired
     private ChatService chatService;
+    @Autowired
+    private MinioStorageService minioStorageService;
 
     // --- UPDATED PRODUCTION SEARCH METHOD ---
     public List<ReportResponse> searchReports(String statusStr, Long authorId) {
@@ -87,6 +89,7 @@ public class ReportService {
         report.setSummary(request.getSummary());
         report.setLocationLat(request.getLatitude());
         report.setLocationLng(request.getLongitude());
+        report.setLocationName(request.getLocationName());
         report.setCasualtyCount(request.getCasualtyCount());
         report.setStatus(EReportStatus.SUBMITTED);
 
@@ -159,8 +162,8 @@ public class ReportService {
             throw new RuntimeException("Unauthorized: Once submitted, only an Editor can modify this report.");
         }
 
-        // Rule B
-        if ((status == EReportStatus.DRAFT || status == EReportStatus.REJECTED)
+        // Rule B: Only draft/rejected editors can edit, UNLESS they are an editor
+        if (!isEditor && (status == EReportStatus.DRAFT || status == EReportStatus.REJECTED)
                 && !currentUser.getId().equals(report.getAuthor().getId())) {
             throw new RuntimeException("Unauthorized: You can only edit your own drafts.");
         }
@@ -182,11 +185,38 @@ public class ReportService {
         report.setSummary(request.getSummary());
         report.setLocationLat(request.getLatitude());
         report.setLocationLng(request.getLongitude());
+        report.setLocationName(request.getLocationName());
         report.setCasualtyCount(request.getCasualtyCount());
         report.setContentEncrypted(securityService.encrypt(request.getContent()));
 
-        // Reset status to DRAFT or SUBMITTED on update if it was rejected/published
-        // report.setStatus(EReportStatus.DRAFT);
+        // Handle Media Attachments on Update
+        if (request.getMediaFiles() != null && !request.getMediaFiles().isEmpty()) {
+            List<MediaAttachment> existing = mediaAttachmentRepository.findByReportId(report.getId());
+            Set<String> existingPaths = existing.stream().map(MediaAttachment::getFilePath).collect(Collectors.toSet());
+
+            // Check if user is trying to add NEW media
+            boolean addingNewMedia = request.getMediaFiles().stream().anyMatch(f -> !existingPaths.contains(f));
+
+            if (addingNewMedia && !isEditor) {
+                // If not an editor, only allow new image uploads if the report is in DRAFT
+                // state
+                if (status != EReportStatus.DRAFT && status != EReportStatus.REJECTED) {
+                    throw new RuntimeException(
+                            "Unauthorized: Journalists can only upload images to DRAFT or REJECTED reports.");
+                }
+            }
+
+            for (String fileName : request.getMediaFiles()) {
+                if (!existingPaths.contains(fileName)) {
+                    MediaAttachment attachment = new MediaAttachment();
+                    attachment.setReport(report);
+                    attachment.setFilePath(fileName);
+                    attachment.setFileType("unknown");
+                    attachment.setIsEncrypted(false);
+                    mediaAttachmentRepository.save(attachment);
+                }
+            }
+        }
 
         return mapToResponse(reportRepository.save(report), true);
     }
@@ -205,9 +235,11 @@ public class ReportService {
         response.setTitle(report.getTitle());
         response.setSummary(report.getSummary());
         response.setAuthorName(report.getAuthor().getFullName());
+        response.setAuthorId(report.getAuthor().getId());
         response.setStatus(report.getStatus().name());
         response.setLatitude(report.getLocationLat());
         response.setLongitude(report.getLocationLng());
+        response.setLocationName(report.getLocationName());
         response.setCasualtyCount(report.getCasualtyCount());
         response.setCreatedAt(report.getCreatedAt());
 
@@ -221,6 +253,14 @@ public class ReportService {
                 .map(Category::getName)
                 .collect(Collectors.toSet());
         response.setCategories(catNames);
+
+        List<MediaAttachment> attachments = mediaAttachmentRepository.findByReportId(report.getId());
+        if (attachments != null && !attachments.isEmpty()) {
+            List<String> mediaFiles = attachments.stream()
+                    .map(a -> minioStorageService.getFileUrl(a.getFilePath()))
+                    .collect(Collectors.toList());
+            response.setMediaFiles(mediaFiles);
+        }
 
         return response;
     }

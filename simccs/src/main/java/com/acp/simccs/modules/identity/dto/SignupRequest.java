@@ -17,8 +17,10 @@ public class SignupRequest {
     @NotBlank
     @Size(min = 6, max = 40)
     private String password;
-    
+
     private String fullName;
-    
+
+    private String nationalId;
+
     private Set<String> role; // ["admin", "journalist"]
 }
