@@ -45,10 +45,18 @@ public class GeminiApiClient {
         } catch (RestClientResponseException e) {
             log.error("HTTP Error communicating with Gemini API. Status: {}, Response: {}",
                     e.getStatusCode(), e.getResponseBodyAsString(), e);
-            throw new RuntimeException("Failed to analyze content using AI: HTTP " + e.getStatusCode(), e);
+            String errorMsg = "Gemini API Error: " + e.getStatusCode();
+            if (e.getStatusCode().is4xxClientError()) {
+                errorMsg = "AI Configuration Error: Please check API key and URL permissions.";
+            } else if (e.getStatusCode().is5xxServerError()) {
+                errorMsg = "Gemini Service is temporarily unavailable. Please try again later.";
+            }
+            throw new RuntimeException(errorMsg, e);
         } catch (Exception e) {
-            log.error("Unexpected error during Gemini API call", e);
-            throw new RuntimeException("Unexpected error during AI analysis", e);
+            log.error("Critical error during Gemini API orchestration", e);
+            throw new RuntimeException(
+                    "AI Analysis engine encountered a processing error. If this persists, contact system admin.", e);
         }
+
     }
 }

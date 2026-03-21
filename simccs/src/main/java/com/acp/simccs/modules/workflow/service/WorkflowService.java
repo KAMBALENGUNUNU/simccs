@@ -1,6 +1,6 @@
 package com.acp.simccs.modules.workflow.service;
 
-import com.acp.simccs.common.service.NotificationService; // <--- NEW IMPORT
+import com.acp.simccs.common.service.NotificationService;
 import com.acp.simccs.modules.crisis.model.CrisisReport;
 import com.acp.simccs.modules.crisis.model.EReportStatus;
 import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
@@ -11,6 +11,7 @@ import com.acp.simccs.modules.workflow.dto.ReviewRequest;
 import com.acp.simccs.modules.workflow.model.EWorkflowAction;
 import com.acp.simccs.modules.workflow.model.WorkflowAction;
 import com.acp.simccs.modules.workflow.repository.WorkflowActionRepository;
+import com.acp.simccs.security.SecurityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,9 @@ public class WorkflowService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private SecurityService securityService;
 
     @Transactional
     public void processReview(Long reportId, ReviewRequest request, String editorEmail) {
@@ -105,11 +109,19 @@ public class WorkflowService {
     }
 
     public java.util.List<java.util.Map<String, Object>> getVersions(Long reportId) {
+        // Fetch the parent report for context (title, author)
+        CrisisReport parentReport = reportRepository.findById(reportId)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+
         return ((java.util.List<?>) reportVersionRepository.findByReportId(reportId)).stream()
                 .map(obj -> {
                     com.acp.simccs.modules.workflow.model.ReportVersion v = (com.acp.simccs.modules.workflow.model.ReportVersion) obj;
                     java.util.Map<String, Object> dto = new java.util.HashMap<>();
                     dto.put("id", v.getId());
+                    dto.put("reportId", parentReport.getId());
+                    dto.put("reportTitle", parentReport.getTitle());
+                    dto.put("reportAuthor",
+                            parentReport.getAuthor() != null ? parentReport.getAuthor().getFullName() : "Unknown");
                     dto.put("createdAt", v.getCreatedAt());
                     dto.put("changeReason", v.getChangeReason());
                     dto.put("actorName", v.getEditor() != null ? v.getEditor().getFullName() : "Unknown");
@@ -123,12 +135,30 @@ public class WorkflowService {
         com.acp.simccs.modules.workflow.model.ReportVersion v = (com.acp.simccs.modules.workflow.model.ReportVersion) reportVersionRepository
                 .findById(versionId)
                 .orElseThrow(() -> new RuntimeException("Version not found"));
+
+        // Decrypt the content snapshot before returning it to the client
+        String decryptedContent;
+        try {
+            decryptedContent = securityService.decrypt(v.getContentSnapshotEncrypted());
+        } catch (Exception e) {
+            decryptedContent = "[Decryption failed: content may be corrupted or from an older encryption scheme]";
+        }
+
+        CrisisReport parentReport = v.getReport();
+
         java.util.Map<String, Object> dto = new java.util.HashMap<>();
         dto.put("id", v.getId());
+        dto.put("reportId", parentReport != null ? parentReport.getId() : null);
+        dto.put("reportTitle", parentReport != null ? parentReport.getTitle() : "Unknown");
+        dto.put("reportSummary", parentReport != null ? parentReport.getSummary() : "");
+        dto.put("reportAuthor",
+                parentReport != null && parentReport.getAuthor() != null ? parentReport.getAuthor().getFullName()
+                        : "Unknown");
+        dto.put("reportLocation", parentReport != null ? parentReport.getLocationName() : null);
         dto.put("createdAt", v.getCreatedAt());
         dto.put("changeReason", v.getChangeReason());
         dto.put("actorName", v.getEditor() != null ? v.getEditor().getFullName() : "Unknown");
-        dto.put("contentSnapshotEncrypted", v.getContentSnapshotEncrypted());
+        dto.put("content", decryptedContent);
         dto.put("versionNumber", v.getVersionNumber());
         return dto;
     }

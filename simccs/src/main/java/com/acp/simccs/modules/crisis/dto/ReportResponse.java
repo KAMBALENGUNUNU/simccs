@@ -20,4 +20,5 @@ public class ReportResponse {
     private LocalDateTime createdAt;
     private Set<String> categories;
     private java.util.List<String> mediaFiles;
+    private boolean flagged;
 }

@@ -1,8 +1,10 @@
 package com.acp.simccs.modules.misinformation.service;
 
+import com.acp.simccs.modules.misinformation.client.FactCheckClient;
 import com.acp.simccs.modules.misinformation.client.GeminiApiClient;
 import com.acp.simccs.modules.misinformation.dto.AiAnalysisRequest;
 import com.acp.simccs.modules.misinformation.dto.AiAnalysisResponse;
+import com.acp.simccs.modules.misinformation.dto.FactCheckResponse;
 import com.acp.simccs.modules.misinformation.dto.GeminiApiResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,16 +25,17 @@ import java.util.List;
 public class AiMisinformationService {
 
     private final GeminiApiClient geminiApiClient;
+    private final FactCheckClient factCheckClient;
     private final ObjectMapper objectMapper;
 
     private static final String SYSTEM_PROMPT = """
-            You are a Senior Crisis Intelligence Analyst working for the Agence Congolaise de Presse (ACP) in the Democratic Republic of the Congo (DRC). 
+            You are a Senior Crisis Intelligence Analyst working for the Agence Congolaise de Presse (ACP) in the Democratic Republic of the Congo (DRC).
             Your task is to analyze field crisis reports (which will primarily be in French) for misinformation, rumors, and contextual inaccuracies.
 
             CRITICAL RULES for your analysis:
             1. DRC Context Match: The event MUST make logical, geographical, and climatic sense within the DRC. If a report describes events that are impossible or highly improbable in the Congo (e.g., snowstorms, hurricanes, ocean tsunamis, subway train derailments) or references foreign cities/institutions as if they were local, you MUST assign a high confidence score (>0.80).
             2. Factuality: Flag hyperbole, known conspiracy theories, or panic-inducing claims lacking factual evidence.
-            
+
             When assigning the reason, if it fails the DRC context check, explicitly state why it does not fit the reality of the Democratic Republic of the Congo.
 
             You must return ONLY a raw JSON object matching the exact structure below, with no markdown formatting, no code blocks, and no conversational text.
@@ -68,19 +71,46 @@ public class AiMisinformationService {
                                 .build()))
                 .build();
 
-        // 1. Call API
+        // 1. Call Gemini API
         GeminiApiResponse response = geminiApiClient.analyze(request);
 
-        // 2. Extract JSON string from response
+        // 2. Extract JSON string from Gemini response
         String rawJson = extractTextFromResponse(response);
 
         // 3. Parse into the expected DTO
+        AiAnalysisResponse aiResult;
         try {
-            return objectMapper.readValue(rawJson, AiAnalysisResponse.class);
+            aiResult = objectMapper.readValue(rawJson, AiAnalysisResponse.class);
         } catch (JsonProcessingException e) {
-            log.error("Failed to parse Gemini API response into AiAnalysisResponse. Raw response: {}", rawJson, e);
-            throw new RuntimeException("Failed to parse AI response. Expected raw JSON but found: " + rawJson, e);
+            log.error("Failed to parse Gemini API response into AiAnalysisResponse.");
+            throw new RuntimeException("Failed to parse AI response. Expected raw JSON.", e);
         }
+
+        // 4. Call Google Fact Check API as a second layer
+        try {
+            String query = decryptedReport.length() > 200 ? decryptedReport.substring(0, 200) : decryptedReport;
+            FactCheckResponse factCheckResponse = factCheckClient.search(query);
+
+            if (factCheckResponse != null && factCheckResponse.getClaims() != null) {
+                List<AiAnalysisResponse.FactCheckHit> hits = new java.util.ArrayList<>();
+                for (FactCheckResponse.Claim claim : factCheckResponse.getClaims()) {
+                    if (claim.getClaimReview() != null && !claim.getClaimReview().isEmpty()) {
+                        FactCheckResponse.ClaimReview review = claim.getClaimReview().get(0);
+                        hits.add(AiAnalysisResponse.FactCheckHit.builder()
+                                .claim(claim.getText())
+                                .rating(review.getTextualRating())
+                                .sourceUrl(review.getUrl())
+                                .publisher(review.getPublisher() != null ? review.getPublisher().getName() : "Unknown")
+                                .build());
+                    }
+                }
+                aiResult.setFactCheckHits(hits);
+            }
+        } catch (Exception e) {
+            log.warn("Google Fact Check API check failed, continuing with Gemini results only.", e);
+        }
+
+        return aiResult;
     }
 
     private String extractTextFromResponse(GeminiApiResponse response) {

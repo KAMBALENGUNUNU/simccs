@@ -229,6 +229,9 @@ public class ReportService {
         reportRepository.save(report);
     }
 
+    @Autowired
+    private com.acp.simccs.modules.workflow.repository.MisinformationFlagRepository misinformationFlagRepository;
+
     private ReportResponse mapToResponse(CrisisReport report, boolean decryptContent) {
         ReportResponse response = new ReportResponse();
         response.setId(report.getId());
@@ -243,7 +246,11 @@ public class ReportService {
         response.setCasualtyCount(report.getCasualtyCount());
         response.setCreatedAt(report.getCreatedAt());
 
+        // Check if report is flagged
+        response.setFlagged(!misinformationFlagRepository.findByReportId(report.getId()).isEmpty());
+
         if (decryptContent) {
+
             response.setContent(securityService.decrypt(report.getContentEncrypted()));
         } else {
             response.setContent("Encrypted content... view details to read.");

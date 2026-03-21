@@ -17,7 +17,7 @@ public class AiEditorController {
     private final AiEditorService aiEditorService;
 
     @PostMapping("/ai-edit")
-    @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('EDITOR') or hasRole('ADMIN') or hasRole('JOURNALIST')")
     public ResponseEntity<ResponseDTO<AiEditorResponse>> getSuggestedEdits(@RequestBody AiEditorRequest request) {
         if (request.getReportId() == null) {
             return ResponseEntity.badRequest().body(ResponseDTO.error("Report ID is required"));
