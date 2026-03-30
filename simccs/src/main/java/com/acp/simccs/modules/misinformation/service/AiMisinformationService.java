@@ -43,7 +43,8 @@ public class AiMisinformationService {
             Expected JSON structure:
             {
               "confidenceScore": <Double between 0.0 and 1.0 representing the likelihood of misinformation>,
-              "reason": "<String explaining the specific reasons for this score based on the text>"
+              "reason": "<String explaining the specific reasons for this score based on the text>",
+              "searchQuery": "<String containing STRICTLY 2 to 3 most essential search keywords (e.g., 'Netanyahu dead' or 'Goma volcano'). Do not include location unless crucial. No full sentences! Leave empty if no specific claim is made>"
             }
 
             Text to analyze:
@@ -88,23 +89,26 @@ public class AiMisinformationService {
 
         // 4. Call Google Fact Check API as a second layer
         try {
-            String query = decryptedReport.length() > 200 ? decryptedReport.substring(0, 200) : decryptedReport;
-            FactCheckResponse factCheckResponse = factCheckClient.search(query);
+            String query = aiResult.getSearchQuery();
+            
+            if (query != null && !query.trim().isEmpty()) {
+                FactCheckResponse factCheckResponse = factCheckClient.search(query);
 
-            if (factCheckResponse != null && factCheckResponse.getClaims() != null) {
-                List<AiAnalysisResponse.FactCheckHit> hits = new java.util.ArrayList<>();
-                for (FactCheckResponse.Claim claim : factCheckResponse.getClaims()) {
-                    if (claim.getClaimReview() != null && !claim.getClaimReview().isEmpty()) {
-                        FactCheckResponse.ClaimReview review = claim.getClaimReview().get(0);
-                        hits.add(AiAnalysisResponse.FactCheckHit.builder()
-                                .claim(claim.getText())
-                                .rating(review.getTextualRating())
-                                .sourceUrl(review.getUrl())
-                                .publisher(review.getPublisher() != null ? review.getPublisher().getName() : "Unknown")
-                                .build());
+                if (factCheckResponse != null && factCheckResponse.getClaims() != null) {
+                    List<AiAnalysisResponse.FactCheckHit> hits = new java.util.ArrayList<>();
+                    for (FactCheckResponse.Claim claim : factCheckResponse.getClaims()) {
+                        if (claim.getClaimReview() != null && !claim.getClaimReview().isEmpty()) {
+                            FactCheckResponse.ClaimReview review = claim.getClaimReview().get(0);
+                            hits.add(AiAnalysisResponse.FactCheckHit.builder()
+                                    .claim(claim.getText())
+                                    .rating(review.getTextualRating())
+                                    .sourceUrl(review.getUrl())
+                                    .publisher(review.getPublisher() != null ? review.getPublisher().getName() : "Unknown")
+                                    .build());
+                        }
                     }
+                    aiResult.setFactCheckHits(hits);
                 }
-                aiResult.setFactCheckHits(hits);
             }
         } catch (Exception e) {
             log.warn("Google Fact Check API check failed, continuing with Gemini results only.", e);

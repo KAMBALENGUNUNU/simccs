@@ -20,8 +20,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,18 +43,23 @@ public class AnalyticsController {
         private final WorkflowActionRepository workflowActionRepository;
 
         @GetMapping("/dashboard")
-        public ResponseEntity<ResponseDTO<Map<String, Object>>> getDashboardStats() {
+        public ResponseEntity<ResponseDTO<Map<String, Object>>> getDashboardStats(
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
                 List<CrisisReport> allReports = crisisReportRepository.findAll().stream()
                                 .filter(r -> r.getStatus() != EReportStatus.DELETED)
+                                .filter(r -> startDate == null || !r.getCreatedAt().isBefore(startDate))
+                                .filter(r -> endDate == null || !r.getCreatedAt().isAfter(endDate))
                                 .collect(Collectors.toList());
                 Map<String, Object> stats = new HashMap<>();
 
                 // 1. Basic Counters
                 stats.put("totalReports", allReports.size());
-                stats.put("totalCasualties",
+                stats.put("urgentReports",
                                 allReports.stream()
-                                                .mapToInt(r -> r.getCasualtyCount() == null ? 0 : r.getCasualtyCount())
-                                                .sum());
+                                                .filter(r -> r.getPriority() != null &&
+                                                                r.getPriority().name().equals("URGENT"))
+                                                .count());
 
                 // 2. Count by Status (Mutually Exclusive for Dashboard)
                 // Pending = DRAFT + SUBMITTED
@@ -82,26 +90,51 @@ public class AnalyticsController {
                                 .collect(Collectors.groupingBy(r -> r.getStatus().name(), Collectors.counting()));
                 stats.put("reportsByStatus", reportsByStatus);
 
-                // 4. Reports by Category
+                // 4. Reports by Report Type
                 Map<String, Long> reportsByCategory = new HashMap<>();
-                allReports.forEach(report -> {
-                        report.getCategories().forEach(category -> {
-                                reportsByCategory.put(category.getName(),
-                                                reportsByCategory.getOrDefault(category.getName(), 0L) + 1);
-                        });
-                });
+                for (com.acp.simccs.modules.crisis.model.EReportType type : com.acp.simccs.modules.crisis.model.EReportType
+                                .values()) {
+                        reportsByCategory.put(type.name(), 0L);
+                }
+                allReports.stream()
+                                .filter(r -> r.getReportType() != null)
+                                .forEach(r -> reportsByCategory.put(r.getReportType().name(),
+                                                reportsByCategory.getOrDefault(r.getReportType().name(), 0L) + 1));
                 stats.put("reportsByCategory", reportsByCategory);
 
-                // 5. Recent Activity (Last 5 reports)
+                // 5. Recent Activity (Full list for interval, used primarily by detailed PDFs)
+                List<WorkflowAction> allActions = workflowActionRepository.findAll();
                 List<Map<String, Object>> recentActivity = allReports.stream()
                                 .sorted((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()))
-                                .limit(5)
                                 .map(r -> {
                                         Map<String, Object> activity = new HashMap<>();
                                         activity.put("id", r.getId());
                                         activity.put("title", r.getTitle());
                                         activity.put("status", r.getStatus().name());
                                         activity.put("createdAt", r.getCreatedAt());
+
+                                        String authorName = (r.getAuthor() != null)
+                                                        ? (r.getAuthor().getFullName() != null
+                                                                        ? r.getAuthor().getFullName()
+                                                                        : r.getAuthor().getEmail())
+                                                        : "Unknown";
+                                        activity.put("authorName", authorName);
+
+                                        String editorName = "None";
+                                        var reportActions = allActions.stream()
+                                                        .filter(a -> a.getReport() != null
+                                                                        && a.getReport().getId().equals(r.getId()))
+                                                        .collect(Collectors.toList());
+                                        if (!reportActions.isEmpty()) {
+                                                var lastAction = reportActions.get(reportActions.size() - 1);
+                                                if (lastAction.getActor() != null) {
+                                                        editorName = lastAction.getActor().getFullName() != null
+                                                                        ? lastAction.getActor().getFullName()
+                                                                        : lastAction.getActor().getEmail();
+                                                }
+                                        }
+                                        activity.put("editorName", editorName);
+
                                         return activity;
                                 })
                                 .collect(Collectors.toList());

@@ -3,7 +3,6 @@ package com.acp.simccs.modules.crisis.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import java.util.Set;
 
 @Data
 public class ReportRequest {
@@ -11,7 +10,7 @@ public class ReportRequest {
     private String title;
 
     @NotBlank
-    private String content; // This is the PLAIN TEXT content coming from the user
+    private String content; // Plain text — encrypted by the service before persisting
 
     @NotBlank
     private String summary;
@@ -24,9 +23,11 @@ public class ReportRequest {
 
     private String locationName;
 
-    private Integer casualtyCount;
+    /** Editorial classification: BREAKING | EXCLUSIVE | PRESS_RELEASE | FEATURE */
+    private String reportType;
 
-    private Set<String> categories; // e.g. ["Fire", "Riot"]
+    /** Dispatch priority: URGENT | HIGH | NORMAL | LOW */
+    private String priority;
 
     private java.util.List<String> mediaFiles;
 }

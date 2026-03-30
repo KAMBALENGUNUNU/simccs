@@ -2,7 +2,6 @@ package com.acp.simccs.modules.crisis.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.util.Set;
 
 @Data
 public class ReportResponse {
@@ -16,9 +15,11 @@ public class ReportResponse {
     private Double latitude;
     private Double longitude;
     private String locationName;
-    private Integer casualtyCount;
+    /** e.g. "BREAKING", "EXCLUSIVE", "PRESS_RELEASE", "FEATURE" */
+    private String reportType;
+    /** e.g. "URGENT", "HIGH", "NORMAL", "LOW" */
+    private String priority;
     private LocalDateTime createdAt;
-    private Set<String> categories;
     private java.util.List<String> mediaFiles;
     private boolean flagged;
 }

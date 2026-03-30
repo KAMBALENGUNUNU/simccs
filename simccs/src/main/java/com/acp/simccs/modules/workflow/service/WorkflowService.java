@@ -169,7 +169,22 @@ public class WorkflowService {
         misinformationService.manuallyFlagReport(report);
     }
 
-    public java.util.List<?> getFlaggedReports() {
-        return misinformationService.getFlaggedReports();
+    @Transactional(readOnly = true)
+    public java.util.List<java.util.Map<String, Object>> getFlaggedReports() {
+        return misinformationService.getFlaggedReports().stream().map(flag -> {
+            java.util.Map<String, Object> dto = new java.util.HashMap<>();
+            dto.put("id", flag.getId());
+            dto.put("reason", flag.getReason());
+            dto.put("aiConfidenceScore", flag.getAiConfidenceScore());
+            dto.put("createdAt", flag.getCreatedAt());
+
+            if (flag.getReport() != null) {
+                java.util.Map<String, Object> reportDto = new java.util.HashMap<>();
+                reportDto.put("id", flag.getReport().getId());
+                reportDto.put("title", flag.getReport().getTitle());
+                dto.put("report", reportDto);
+            }
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
 }

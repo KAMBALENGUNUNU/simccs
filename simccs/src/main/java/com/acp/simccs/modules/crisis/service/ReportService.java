@@ -3,10 +3,10 @@ package com.acp.simccs.modules.crisis.service;
 import com.acp.simccs.modules.crisis.dto.ReportRequest;
 import com.acp.simccs.modules.crisis.dto.ReportResponse;
 import com.acp.simccs.modules.crisis.event.ReportSubmittedEvent;
-import com.acp.simccs.modules.crisis.model.Category;
 import com.acp.simccs.modules.crisis.model.CrisisReport;
 import com.acp.simccs.modules.crisis.model.EReportStatus;
-import com.acp.simccs.modules.crisis.repository.CategoryRepository;
+import com.acp.simccs.modules.crisis.model.EReportType;
+import com.acp.simccs.modules.crisis.model.EPriority;
 import com.acp.simccs.modules.crisis.repository.CrisisReportRepository;
 import com.acp.simccs.modules.identity.model.User;
 import com.acp.simccs.modules.identity.repository.UserRepository;
@@ -23,7 +23,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,8 +38,6 @@ public class ReportService {
     private CrisisReportRepository reportRepository;
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private CategoryRepository categoryRepository;
     @Autowired
     private SecurityService securityService;
     @Autowired
@@ -90,22 +87,28 @@ public class ReportService {
         report.setLocationLat(request.getLatitude());
         report.setLocationLng(request.getLongitude());
         report.setLocationName(request.getLocationName());
-        report.setCasualtyCount(request.getCasualtyCount());
         report.setStatus(EReportStatus.SUBMITTED);
+
+        // Parse and assign report type
+        try {
+            report.setReportType(request.getReportType() != null
+                    ? EReportType.valueOf(request.getReportType().toUpperCase())
+                    : EReportType.FEATURE);
+        } catch (IllegalArgumentException e) {
+            report.setReportType(EReportType.FEATURE);
+        }
+
+        // Parse and assign priority
+        try {
+            report.setPriority(request.getPriority() != null
+                    ? EPriority.valueOf(request.getPriority().toUpperCase())
+                    : EPriority.NORMAL);
+        } catch (IllegalArgumentException e) {
+            report.setPriority(EPriority.NORMAL);
+        }
 
         // Encrypt content
         report.setContentEncrypted(securityService.encrypt(request.getContent()));
-
-        // Handle Categories
-        Set<Category> categories = new HashSet<>();
-        if (request.getCategories() != null) {
-            for (String catName : request.getCategories()) {
-                Category category = categoryRepository.findByName(catName)
-                        .orElseGet(() -> categoryRepository.save(new Category(catName)));
-                categories.add(category);
-            }
-        }
-        report.setCategories(categories);
 
         // Save first to generate ID
         CrisisReport savedReport = reportRepository.save(report);
@@ -186,8 +189,21 @@ public class ReportService {
         report.setLocationLat(request.getLatitude());
         report.setLocationLng(request.getLongitude());
         report.setLocationName(request.getLocationName());
-        report.setCasualtyCount(request.getCasualtyCount());
         report.setContentEncrypted(securityService.encrypt(request.getContent()));
+
+        // Update report type and priority if provided
+        if (request.getReportType() != null) {
+            try {
+                report.setReportType(EReportType.valueOf(request.getReportType().toUpperCase()));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        if (request.getPriority() != null) {
+            try {
+                report.setPriority(EPriority.valueOf(request.getPriority().toUpperCase()));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
 
         // Handle Media Attachments on Update
         if (request.getMediaFiles() != null && !request.getMediaFiles().isEmpty()) {
@@ -243,23 +259,19 @@ public class ReportService {
         response.setLatitude(report.getLocationLat());
         response.setLongitude(report.getLocationLng());
         response.setLocationName(report.getLocationName());
-        response.setCasualtyCount(report.getCasualtyCount());
+        response.setReportType(
+                report.getReportType() != null ? report.getReportType().name() : EReportType.FEATURE.name());
+        response.setPriority(report.getPriority() != null ? report.getPriority().name() : EPriority.NORMAL.name());
         response.setCreatedAt(report.getCreatedAt());
 
         // Check if report is flagged
         response.setFlagged(!misinformationFlagRepository.findByReportId(report.getId()).isEmpty());
 
         if (decryptContent) {
-
             response.setContent(securityService.decrypt(report.getContentEncrypted()));
         } else {
             response.setContent("Encrypted content... view details to read.");
         }
-
-        Set<String> catNames = report.getCategories().stream()
-                .map(Category::getName)
-                .collect(Collectors.toSet());
-        response.setCategories(catNames);
 
         List<MediaAttachment> attachments = mediaAttachmentRepository.findByReportId(report.getId());
         if (attachments != null && !attachments.isEmpty()) {

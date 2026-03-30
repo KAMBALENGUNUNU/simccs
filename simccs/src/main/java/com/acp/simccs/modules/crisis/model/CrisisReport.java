@@ -6,8 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "reports")
@@ -38,18 +36,19 @@ public class CrisisReport {
     @Enumerated(EnumType.STRING)
     private EReportStatus status = EReportStatus.DRAFT;
 
-    @Column(name = "casualty_count")
-    private Integer casualtyCount = 0;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "report_type")
+    private EReportType reportType = EReportType.FEATURE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority")
+    private EPriority priority = EPriority.NORMAL;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "report_categories", joinColumns = @JoinColumn(name = "report_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
-    private Set<Category> categories = new HashSet<>();
 
     // Helper method to update timestamp before update
     @PreUpdate

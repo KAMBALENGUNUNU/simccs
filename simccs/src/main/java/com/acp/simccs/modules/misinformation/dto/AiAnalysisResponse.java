@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Represents the expected JSON structure from the AI.
  */
@@ -12,10 +14,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AiAnalysisResponse {
 
     private Double confidenceScore;
     private String reason;
+    private String searchQuery;
     private java.util.List<FactCheckHit> factCheckHits;
 
     @Data
