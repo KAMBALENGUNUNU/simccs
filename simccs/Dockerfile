@@ -23,4 +23,8 @@ COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/app/app.jar"]
+# NEW: Set memory limits so Render's free tier doesn't kill your app
+ENV JAVA_OPTS="-Xmx256m -Xms256m"
+
+# NEW: Use 'sh -c' so the ENTRYPOINT properly reads the $JAVA_OPTS variable
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar /app/app.jar"]
