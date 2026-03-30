@@ -1,0 +1,3 @@
+-- V1 Baseline script
+-- This file is intentionally left empty so Flyway can baseline the existing schema created by Hibernate
+-- All future schema modifications (V2__, V3__, etc.) should be written as SQL scripts in this folder.

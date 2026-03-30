@@ -10,7 +10,10 @@ import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
 
+import lombok.extern.slf4j.Slf4j;
+
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     // Handle Bad Credentials (Login failed)
@@ -49,9 +52,12 @@ public class GlobalExceptionHandler {
             throw ex;
         }
 
+        // Log the exception internally
+        log.error("Unhandled Exception caught: ", ex);
+
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                ex.getMessage(),
+                "An unexpected internal error occurred. Please contact support.",
                 LocalDateTime.now()
         );
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);

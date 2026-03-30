@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # The Spring Boot Application
+  simccs-backend:
+    build: .
+    container_name: simccs-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:mysql://mysql:3306/simccs_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-123456}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:-5lWTLwqQBgr6LKfcl0YtKP7yq8ynaC+Pa+c6euBJnH4=}
+      - MINIO_URL=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-simccs-reports}
+      # The production CORS URL injected via .env
+      - PROD_CORS_URL=${PROD_CORS_URL:-http://localhost:5173}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - simccs-network
+    restart: unless-stopped
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: simccs-mysql
+    environment:
+      MYSQL_DATABASE: simccs_db
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - simccs-network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio
+    container_name: simccs-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - simccs-network
+    restart: unless-stopped
+
+networks:
+  simccs-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  minio-data:
