@@ -34,3 +34,10 @@ build/
 
 ### Env ###
 .env
+
+# Ignore Java crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Ignore uploads
+uploads/
