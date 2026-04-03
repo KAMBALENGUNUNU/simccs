@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ SimCCS — Secure Information Management & Crisis Communication System
+#  SimCCS: Secure Information Management & Crisis Communication System
 
 **A production-grade, cloud-native REST API backend built with Spring Boot 3**
 
@@ -15,7 +15,7 @@
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [About The Project](#-about-the-project)
 - [Architecture Overview](#-architecture-overview)
@@ -34,7 +34,7 @@
 
 ---
 
-## 🎯 About The Project
+##  About The Project
 
 **SimCCS** is a high-performance, enterprise-grade backend system designed to manage **crisis communications**, **misinformation detection**, and **secure team collaboration** in high-stakes operational environments.
 
@@ -46,12 +46,12 @@ The system provides a centralized platform for organizations to:
 - Manage **role-based access control** across a multi-tier user hierarchy (User → Evaluator → Admin → Super Admin)
 - Secure sensitive data using field-level **AES-256 encryption**
 
-> **🌐 Live Production API**: `https://simccs.onrender.com`  
-> **📚 Interactive API Docs**: `https://simccs.onrender.com/swagger-ui/index.html`
+> ** Live Production API**: `https://simccs.onrender.com`  
+> ** Interactive API Docs**: `https://simccs.onrender.com/swagger-ui/index.html`
 
 ---
 
-## 🏛️ Architecture Overview
+##  Architecture Overview
 
 SimCCS adheres to industry-standard clean architecture principles with a strict separation of concerns. Each domain is encapsulated within its own self-contained module.
 
@@ -91,7 +91,7 @@ SimCCS adheres to industry-standard clean architecture principles with a strict 
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Category | Technology | Version |
 |---|---|---|
@@ -117,45 +117,45 @@ SimCCS adheres to industry-standard clean architecture principles with a strict 
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🔐 Identity & Access Management
+###  Identity & Access Management
 - Full **JWT-based stateless authentication** with access + refresh token rotation
 - **Multi-Factor Authentication (MFA/TOTP)** via QR-code-based authenticator apps (Google Authenticator, Authy)
 - **Role-Based Access Control (RBAC)** with 4 hierarchical roles: `USER`, `EVALUATOR`, `ADMIN`, `SUPER_ADMIN`
 - Secure **password reset** flow via time-limited email tokens
 - Method-level security via Spring's `@PreAuthorize`
 
-### 📋 Crisis Report Management
+###  Crisis Report Management
 - Full **CRUD lifecycle** for incident reports with structured status transitions
 - **Report classification** by category, severity, and geographic zone
 - Field-level **AES-256 encryption** for sensitive report content
 - **File attachment** support (images, documents) via MinIO object storage
 - **AI-powered report editor** assistant using Google Gemini
 
-### 🤖 AI-Powered Misinformation Detection
+###  AI-Powered Misinformation Detection
 - Automatic **LLM analysis** of submitted reports using Google Gemini 2.5 Flash
 - Claim cross-referencing against the **Google Fact Check Tools API**
 - Structured AI response with confidence scores and source citations
 
-### 💬 Real-Time Communication
+###  Real-Time Communication
 - **WebSocket (STOMP)** based chat system for secure team messaging
 - **In-app notification** system with database persistence
 - **Email notification** delivery for critical workflow events
 
-### 📊 Analytics & Reporting
+###  Analytics & Reporting
 - Comprehensive admin **analytics dashboard** API endpoints
 - Report counts aggregated by status, category, zone, and time period
 - Personnel activity audit trails
 
-### ⚙️ Operational Workflow Engine
+###  Operational Workflow Engine
 - Structured challenge/evaluation workflow for report verification
 - Dispute and cancellation management
 - Schedule-based automated data synchronization via Spring `@Scheduler`
 
 ---
 
-## 📦 Prerequisites
+##  Prerequisites
 
 Before you begin, ensure you have the following installed on your machine:
 
@@ -169,7 +169,7 @@ Before you begin, ensure you have the following installed on your machine:
 
 ---
 
-## 🚀 Local Development Setup
+##  Local Development Setup
 
 This is the recommended approach for active development. The application uses a `.env` file to manage secrets locally.
 
@@ -231,7 +231,7 @@ curl http://localhost:8080/actuator/health
 
 ---
 
-## 🐳 Running with Docker Compose
+##  Running with Docker Compose
 
 This is the most reproducible way to run the **full stack** (App + MySQL + MinIO) locally, eliminating the need to install MySQL or MinIO separately.
 
@@ -274,7 +274,7 @@ docker-compose down
 
 ---
 
-## 🔑 Environment Variables Reference
+##  Environment Variables Reference
 
 Copy `.env.example` to `.env` and fill in the following values. **Never commit your `.env` file to Git.**
 
@@ -296,25 +296,25 @@ Copy `.env.example` to `.env` and fill in the following values. **Never commit y
 | `MINIO_BUCKET_NAME` | ✅ | MinIO bucket for file uploads | `simccs-reports` |
 | `SPRING_PROFILES_ACTIVE` | ➖ | Active Spring profile (`dev` or `prod`) | `dev` |
 
-> **💡 How to Generate a Gmail App Password:**
+> ** How to Generate a Gmail App Password:**
 > 1. Enable **2-Step Verification** on your Google account.
 > 2. Go to **Google Account → Security → App Passwords**.
 > 3. Generate a new App Password, select "Other" and name it `SimCCS`.
 > 4. Use the generated 16-character code as your `MAIL_PASSWORD`.
 
-> **💡 How to Generate a Secure JWT Secret:**
+> ** How to Generate a Secure JWT Secret:**
 > ```bash
 > openssl rand -hex 32
 > ```
 
-> **💡 How to Generate a Secure Encryption Key:**
+> ** How to Generate a Secure Encryption Key:**
 > ```bash
 > openssl rand -base64 32
 > ```
 
 ---
 
-## 📚 API Documentation
+##  API Documentation
 
 The API is fully documented with **Swagger UI** via SpringDoc OpenAPI 3.
 
@@ -358,7 +358,7 @@ curl -X POST https://simccs.onrender.com/api/auth/login \
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 simccs/
@@ -403,7 +403,7 @@ simccs/
 
 ---
 
-## ☁️ Production Deployment (Render)
+##  Production Deployment (Render)
 
 The application is deployed on **Render.com** using a **Dockerfile-based Web Service**. The build-and-deploy pipeline is fully automated — every `git push` to the main branch triggers a new deployment.
 
@@ -449,7 +449,7 @@ GET https://simccs.onrender.com/actuator/health
 
 ---
 
-## 🔒 Security Architecture
+##  Security Architecture
 
 Security is treated as a first-class citizen, not an afterthought.
 
@@ -488,7 +488,7 @@ Client → Any Protected Request
 
 ---
 
-## 🗄️ Database Strategy
+##  Database Strategy
 
 ### Environment Isolation
 
@@ -518,7 +518,7 @@ All database schema changes are managed by **Flyway**, ensuring version-controll
 
 ---
 
-## 🚩 Known Limitations & Roadmap
+##  Known Limitations & Roadmap
 
 | Item | Status | Notes |
 |---|---|---|
@@ -528,7 +528,7 @@ All database schema changes are managed by **Flyway**, ensuring version-controll
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions, issues, and feature requests are welcome.
 
@@ -541,7 +541,7 @@ Contributions, issues, and feature requests are welcome.
 
 ---
 
-## 📜 License
+##  License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
